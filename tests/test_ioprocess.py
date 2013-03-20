@@ -8,16 +8,9 @@ import string
 import uuid
 import unittest
 
-import lcda.util
-from lcda import ioprocess
-from lcda.ioprocess import (
-    IOProcessFailureError,
-    IOProcessor,
-    )
-from lcda.exc import RPCArgumentsError
-from lcda.views import public_rpc_view
-from lcda.tests import util
-from lcda.tests.util import FunctionalTest
+import ioprocess
+from ioprocess import IOProcessor
+from ioprocess.ioprocess import IOProcessFailureError
 
 _NotSet = object()
 
@@ -930,7 +923,7 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
         being received as input. During testing, values will mostly be
         Python-native datatypes; but in production, values will often be string
         values from JSON input. """
-    coercion_functions = ioprocess.default_coercion_functions_input
+    coercion_functions = ioprocess.ioprocess.default_coercion_functions_input
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -1010,7 +1003,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         
         On output, some value types are coerced to string values by default.
         This is done with JSON-serialization in mind. """
-    coercion_functions = ioprocess.default_coercion_functions_output
+    coercion_functions = ioprocess.ioprocess.default_coercion_functions_output
     
     # ----------------- Arbitrary types fail coercion ------------------
     
