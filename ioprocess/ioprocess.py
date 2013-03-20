@@ -6,8 +6,6 @@ import decimal
 import inspect
 import uuid
 
-from lcda.exc import RPCArgumentsError
-
 """ Jargon:
     'ioval' --> 'Input/Output value'
     'tspec' --> 'Type specification dictionary'
