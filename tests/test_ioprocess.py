@@ -1,3 +1,5 @@
+""" Copyright (c) 2013 Josh Matthias <python.ioprocess@gmail.com> """
+
 import datetime
 import dateutil
 import decimal

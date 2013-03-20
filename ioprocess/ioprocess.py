@@ -1,4 +1,4 @@
-""" Process method arguments from the client. """
+""" Copyright (c) 2013 Josh Matthias <python.ioprocess@gmail.com> """
 
 import datetime
 import dateutil.parser
