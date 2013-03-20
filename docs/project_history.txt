@@ -1,0 +1,73 @@
+===============
+Project History
+===============
+
+This is IOProcess: a python package for processing input and output to
+and from a web service.
+
+IOProcess allows you to define the structure and data types for
+input paramaters and output results.
+
+This project is an offshoot of the 'lcda' project, which is the
+python-based web service provided by Lacoda.
+
+While working on 'lcda', I was using JSON-serialized values for RPC
+input and output. I was taking JSON-decoded dictionaries and passing
+them to RPC methods as keyword arguments. In order to guarantee the
+composition of the input dict, I built a little module that examined the
+composition of the dict and compared it with the argspec of the RPC
+method being called. The original module was called 'kwargcheck'.
+
+From there I added one feature after another. Next, I wanted to add the
+ability to specify the composition of the '**kwargs' dictionary; this
+would allow me to use the '**kwargs' dictionary to populate persistent
+objects, with confidence about what 'kwargs' contained.
+
+Next, I added the ability to nest dictionaries; then the ability to
+specify lists of a certain type ('ListOf'). At this point I realized
+that I actually wanted to do type checking for everything coming out of
+these JSON dictionaries, so I added that.
+
+I had a JSON decoder setup that included some funky rules. I decided
+that these rules should be removed from the decoder and included in the
+'kwargcheck' logic. At this point, because the module included coercion,
+I changed the name to 'argprocess'. The name was ultimately changed to
+'ioprocess' because I wanted this tool to be useful for more than just
+checking keyword arguments - I eventually want it to be usable for
+checking any structured data. For now, it is mostly useful for
+processing dictionaries which are decoded from JSON.
+
+I decided to open-source this project when I began thinking about how to
+handle date values for the 'lcda' project. I came up with a standard
+rule to cover all date values for 'lcda': a string-encoded date value
+(like '2001-12-24') would be converted (on input) to a UTC datetime
+value, with a time value of UTC+900 (USA Pacific time zone midnight
+during daylight savings time). This seemed like a good way to
+consitently treat datetime values in a way that would be mostly
+invisible to the users. To accomplish this, I realized I would need to
+coerce values on both input and output; so the name of the module was
+changed to 'ioprocess'.
+
+I thought that other developers might find this tool useful, and also I
+realized that the rules I'd chosen for coercion would probably not be
+suitable for other developers' purposes. For this reason I added the
+'IOProcessor' class as a context-management tool; in order to change the
+coercion rules, you just need to initialize a new IOProcessor instance
+and provide a dictionary of 'coercion_functions'.
+
+This package takes care of a problem that I've dealt with several times
+on several different projects. In the past, I would simply create a new
+input-checking and type-coercing system each time. Hopefully this
+package will make this task much easier, faster, and more consistent!
+
+I hope this package will be useful to you.
+
+Josh Matthias
+2013-03-20
+
+
+
+
+
+
+
