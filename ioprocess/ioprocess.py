@@ -381,10 +381,10 @@ def tspecs_from_callable(callable_obj):
     required_tspec = {ikey: AnyType for ikey in required_list}
     optional_tspec = {ikey: AnyType for ikey in optional_list}
     
-    result = dict(
-        required_tspec=required_tspec,
-        optional_tspec=optional_tspec,
-        )
+    result = {
+        'required': required_tspec,
+        'optional': optional_tspec,
+        }
     return result
 
 def make_dict_from_list(list_obj):

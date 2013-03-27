@@ -15,7 +15,12 @@ class ResultTest(object):
     def test_result(self):
         result = tspecs_from_callable(self.callable)
         
-        IOProcessor().process(**result)
+        iovals = {}
+        for item in result.itervalues():
+            for ikey in item:
+                iovals.setdefault(ikey, None)
+        
+        IOProcessor().process(iovals, **result)
 
 class TspecValueTest(unittest.TestCase):
     def tspec_value_test(self, tspec_name, expected_list):
