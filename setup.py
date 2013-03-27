@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name='IOProcess',
+    name='ioprocess',
     version='0.2.1',
     author='Josh Matthias',
     author_email='python.ioprocess@gmail.com',
