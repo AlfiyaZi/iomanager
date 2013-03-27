@@ -208,11 +208,14 @@ class IOProcessor(object):
     
     def process(
         self,
-        iovals_dict,
-        required_tspec={},
-        optional_tspec={},
+        iovals,
+        required={},
+        optional={},
         unlimited=False,
         ):
+        iovals_dict = iovals.copy()
+        required_tspec = required.copy()
+        optional_tspec = optional.copy()
         
         combined_tspec = combine_tspecs(required_tspec, optional_tspec)
         
