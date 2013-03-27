@@ -4,3 +4,9 @@ v0.2.0, 2013-03-20 -- First working release.
 - Fix broken import statements from 'lcda' project.
 - Basic package setup files.
 - Apply X11 ("MIT") license.
+
+v0.2.1, 2013-03-27 -- 'process' parameters.
+- Alter 'IOProcess.process' parameters for simplicity. This change is not
+  backwards compatible.
+- Add tests for 'tspecs_from_callable' function.
+- Add 'IOProcessFailureError', 'combine_tspecs' to package-level namespace.
