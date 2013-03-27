@@ -7,7 +7,7 @@ setup(
     author_email='python.ioprocess@gmail.com',
     packages=['ioprocess'],
     scripts=[],
-    url='https://github.com/jmatthias/IOProcess',
+    url='https://github.com/jmatthias/ioprocess',
     license='LICENSE.txt',
     description=('Guarantee structure and composition of input and output.'),
     long_description=open('README.txt').read(),

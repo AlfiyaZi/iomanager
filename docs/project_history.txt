@@ -2,10 +2,10 @@
 Project History
 ===============
 
-This is IOProcess: a Python tool for guaranteeing the structure and composition
+This is ioprocess: a Python tool for guaranteeing the structure and composition
 of input and output.
 
-IOProcess allows you to define the structure and data types for input paramaters
+ioprocess allows you to define the structure and data types for input paramaters
 and output results. This tool was built with JSON serialization in mind.
 
 This project is an offshoot of the 'lcda' project, which is the python-based web
@@ -49,7 +49,7 @@ I thought that other developers might find this tool useful, and also I realized
 that the rules I'd chosen for coercion would probably not be suitable for other
 developers' purposes. For this reason I added the 'IOProcessor' class as a
 context-management tool; in order to change the coercion rules, you just need to
-initialize a new IOProcessor instance and provide a dictionary of
+initialize a new ioprocessor instance and provide a dictionary of
 'coercion_functions'.
 
 This package takes care of a problem that I've dealt with several times on
