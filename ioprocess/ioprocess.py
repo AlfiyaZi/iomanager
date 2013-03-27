@@ -208,11 +208,14 @@ class IOProcessor(object):
     
     def process(
         self,
-        iovals_dict,
-        required_tspec={},
-        optional_tspec={},
+        iovals,
+        required={},
+        optional={},
         unlimited=False,
         ):
+        iovals_dict = iovals.copy()
+        required_tspec = required.copy()
+        optional_tspec = optional.copy()
         
         combined_tspec = combine_tspecs(required_tspec, optional_tspec)
         
@@ -378,10 +381,10 @@ def tspecs_from_callable(callable_obj):
     required_tspec = {ikey: AnyType for ikey in required_list}
     optional_tspec = {ikey: AnyType for ikey in optional_list}
     
-    result = dict(
-        required_tspec=required_tspec,
-        optional_tspec=optional_tspec,
-        )
+    result = {
+        'required': required_tspec,
+        'optional': optional_tspec,
+        }
     return result
 
 def make_dict_from_list(list_obj):

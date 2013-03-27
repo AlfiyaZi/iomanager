@@ -32,8 +32,8 @@ class ProcessTest(unittest.TestCase):
     
     def trial_tspecs(self):
         return dict(
-            optional_tspec={},
-            required_tspec={},
+            optional={},
+            required={},
             unlimited=False,
             )
 
@@ -63,7 +63,7 @@ class BasicTspecTest(ProcessTest):
 class TestRequiredTspec(BasicTspecTest):
     def trial_tspecs(self):
         return dict(
-            required_tspec=self.required_tspec()
+            required=self.required_tspec()
             )
     
     def test_good_iovals(self):
@@ -81,7 +81,7 @@ class TestRequiredTspec(BasicTspecTest):
 
 class TestOptionalTspec(BasicTspecTest):
     def trial_tspecs(self):
-        return dict(optional_tspec=self.optional_tspec())
+        return dict(optional=self.optional_tspec())
     
     def test_good_iovals(self):
         self.good_iovals_test(self.optional_iovals())
@@ -111,8 +111,8 @@ class TestUnlimitedIOVals(BasicTspecTest):
 class TestRequiredAndOptionalBoth(BasicTspecTest):
     def trial_tspecs(self):
         return dict(
-            required_tspec=self.required_tspec(),
-            optional_tspec=self.optional_tspec(),
+            required=self.required_tspec(),
+            optional=self.optional_tspec(),
             )
     
     def test_all_iovals_pass(self):
@@ -140,7 +140,7 @@ class TestRequiredAndOptionalBoth(BasicTspecTest):
 class TestListOf(ProcessTest):
     def trial_tspecs(self):
         return dict(
-            required_tspec={
+            required={
                 'a': ioprocess.ListOf(int)
             }
         )
@@ -176,7 +176,7 @@ class ListOfStructuredTest(object):
     
     def trial_tspecs(self):
         return {
-            (self.tspec_parameter_qualifier + '_tspec'): self.listof_tspec()
+            self.tspec_parameter_qualifier: self.listof_tspec()
         }
     
     def good_item(self, n=0):
@@ -232,7 +232,7 @@ class ListOfStructuredNestedTest(object):
     
     def trial_tspecs(self):
         return {
-            (self.tspec_parameter_qualifier + '_tspec'): self.listof_tspec()
+            self.tspec_parameter_qualifier: self.listof_tspec()
         }
     
     def good_item(self, n=0):
@@ -266,7 +266,7 @@ class TestListOfStructuredNestedRequired(ListOfStructuredNestedTest, ProcessTest
 class TestListOfNestedListOf(ProcessTest):
     def trial_tspecs(self):
         return dict(
-            required_tspec={
+            required={
                 'a': ioprocess.ListOf(
                     ioprocess.ListOf(int)
                 )
@@ -329,7 +329,7 @@ class StructuredTest(ProcessTest):
 class TestStructuredRequired(StructuredTest):
     def trial_tspecs(self):
         return dict(
-            required_tspec=self.structured_tspec()
+            required=self.structured_tspec()
             )
     
     def test_ok_iovals(self):
@@ -356,7 +356,7 @@ class TestStructuredRequired(StructuredTest):
 class TestStructuredOptional(StructuredTest):
     def trial_tspecs(self):
         return dict(
-            optional_tspec=self.structured_tspec()
+            optional=self.structured_tspec()
             )
     
     def test_ok_iovals(self):
@@ -386,7 +386,7 @@ class TestStructuredOptional(StructuredTest):
 class TestStructuredRequiredEmpty(ProcessTest):
     def trial_tspecs(self):
         return dict(
-            required_tspec={'a': {}}
+            required={'a': {}}
             )
     
     def test_ok_iovals_passes(self):
@@ -401,7 +401,7 @@ class TestStructuredRequiredEmpty(ProcessTest):
 class TestStructuredOptionalEmpty(ProcessTest):
     def trial_tspecs(self):
         return dict(
-            optional_tspec={'a': {}}
+            optional={'a': {}}
             )
     
     def test_ok_iovals_passes(self):
@@ -420,7 +420,7 @@ class TestStructuredUnlimited(ProcessTest):
     
     def trial_tspecs(self):
         return dict(
-            optional_tspec={'a': {'b': int}},
+            optional={'a': {'b': int}},
             unlimited=True
             )
     
@@ -468,8 +468,8 @@ class TestStructuredRequiredOverridesOptional(ProcessTest):
     
     def trial_tspecs(self):
         return dict(
-            required_tspec=self.required_tspec(),
-            optional_tspec=self.optional_tspec(),
+            required=self.required_tspec(),
+            optional=self.optional_tspec(),
             )
     
     def test_all_iovals_passes(self):
@@ -641,7 +641,7 @@ class TypeCoercionProcessTest(TypeCoercionTest):
         }
 
 class TestTypeCoercionArguments(TypeCoercionProcessTest):
-    """ Confirm coercion for each of 'required_tspec', 'optional_tspec', and
+    """ Confirm coercion for each of 'required', 'optional', and
         'unlimited' arguments. """
     
     def get_iovals(self):
@@ -649,7 +649,7 @@ class TestTypeCoercionArguments(TypeCoercionProcessTest):
     
     def make_tspecs(self, tspec_kind, **kwargs):
         result = {
-            (tspec_kind + '_tspec'): {
+            tspec_kind: {
                 'a': self.YesCoercionType
                 }
             }
@@ -671,23 +671,23 @@ class TestTypeCoercionArguments(TypeCoercionProcessTest):
         self.coercion_argument_test('optional')
     
     def test_coercion_required_unlimited(self):
-        """ Coercion occurs when 'unlimited' is used with 'required_tspec'. """
+        """ Coercion occurs when 'unlimited' is used with 'required'. """
         tspecs = self.make_tspecs('required', unlimited=True)
         self.coercion_test(tspecs)
     
     def test_coercion_optional_unlimited(self):
-        """ Coercion occurs when 'unlimited' is used with 'optional_tspec'. """
+        """ Coercion occurs when 'unlimited' is used with 'optional'. """
         tspecs = self.make_tspecs('optional', unlimited=True)
         self.coercion_test(tspecs)
 
 class TestTypeCoercionRequiredOverridesOptional(TypeCoercionProcessTest):
-    """ Confirm that when 'required_tspec' and 'optional_tspec' are both
+    """ Confirm that when 'required' and 'optional' are both
         present, 'required' type objects override 'optional. """
     
     def get_tspecs(self):
         return {
-            'required_tspec': {'a': self.YesCoercionType},
-            'optional_tspec': {'a': self.NoCoercionType},
+            'required': {'a': self.YesCoercionType},
+            'optional': {'a': self.NoCoercionType},
             }
     
     def get_iovals(self):
@@ -703,7 +703,7 @@ class TestTypeCoercionTypeObjectClass(TypeCoercionProcessTest):
     
     def get_tspecs(self):
         return {
-            'optional_tspec': {
+            'optional': {
                 'a': self.YesCoercionType,
                 'b': self.NoCoercionType,
                 'c': self.BadCoercionFunctionType,
@@ -719,7 +719,7 @@ class TestTypeCoercionTypeObjectClass(TypeCoercionProcessTest):
     
     def correct_type_test(self, argument_key):
         """ Instances of the type specified in the tspec pass coercion. """
-        correct_type = self.get_tspecs()['optional_tspec'][argument_key]
+        correct_type = self.get_tspecs()['optional'][argument_key]
         iovals = {argument_key: correct_type()}
         self.type_test(argument_key, expected_type=correct_type, iovals=iovals)
     
@@ -789,7 +789,7 @@ class TestTypeCoercionTypeObjectStructured(TypeCoercionProcessTest):
     
     def get_tspecs(self):
         return {
-            'required_tspec': {
+            'required': {
                 'a': {
                     'b': self.YesCoercionType,
                     }
@@ -817,7 +817,7 @@ class TestTypeCoercionTypeObjectListof(TypeCoercionProcessTest):
     
     def get_tspecs(self):
         return {
-            'required_tspec': {
+            'required': {
                 'a': ioprocess.ListOf(self.YesCoercionType),
                 }
             }
@@ -844,7 +844,7 @@ class TestTypeCoercionOther(TypeCoercionTest):
     
     def coercion_test(self, type_obj, iovalue, expected):
         tspecs = {
-            'required_tspec': {'a': type_obj}
+            'required': {'a': type_obj}
             }
         iovals = {'a': iovalue}
         
@@ -1054,13 +1054,13 @@ class TestTypeCoercionCycle(unittest.TestCase):
         tspec =  {'value': type_obj}
         
         output_result = output_processor.process(
-            iovals_dict={'value': starting_value},
-            required_tspec=tspec,
+            iovals={'value': starting_value},
+            required=tspec,
             )
         
         final_result = input_processor.process(
-            iovals_dict=output_result,
-            required_tspec=tspec,
+            iovals=output_result,
+            required=tspec,
             )
         
         final_value = final_result['value']
