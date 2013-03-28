@@ -521,9 +521,9 @@ class TestStructuredRequiredOverridesOptional(ProcessTest):
 
 
 
-# ---------------------- Type checking tests -----------------------
+# ------------------------ Type checking tests -------------------------
 
-@pytest.mark.a
+@pytest.mark.typecheck
 class TypeCheckingTest(unittest.TestCase):
     """ Confirm that coercion behaves correctly when the tspec 'type object' is
         a 'class' object. """
@@ -538,19 +538,33 @@ class TypeCheckingTest(unittest.TestCase):
         """ A custom type for testing type-checking. """
 
 class TestTypeCheckingBasic(TypeCheckingTest):
-    def get_process_result(self, value, tspec_kind='required'):
+    def get_process_result(
+        self,
+        value,
+        tspec_kind='required',
+        expected_type=None
+        ):
+        if expected_type is None:
+            expected_type = self.CustomType
+        
         ioprocessor = IOProcessor()
         ioprocessor.process(
             iovals={'a': value},
-            **{tspec_kind: {'a': self.CustomType}}
+            **{tspec_kind: {'a': expected_type}}
             )
     
-    def process_passes_test(self, *pargs):
-        self.get_process_result(*pargs)
+    def process_passes_test(self, *pargs, **kwargs):
+        self.get_process_result(*pargs, **kwargs)
     
-    def process_raises_test(self, *pargs):
+    def process_raises_test(self, *pargs, **kwargs):
         with pytest.raises(IOProcessFailureError):
-            self.process_passes_test(*pargs)
+            self.process_passes_test(*pargs, **kwargs)
+    
+    def test_invalid_type_raises_required(self):
+        self.process_raises_test(self.InvalidType(), 'required')
+    
+    def test_invalid_type_raises_optional(self):
+        self.process_raises_test(self.InvalidType(), 'optional')
     
     def test_none_value_passes(self):
         self.process_passes_test(None)
@@ -566,11 +580,16 @@ class TestTypeCheckingBasic(TypeCheckingTest):
             should use the 'type_checking_functions' attribute. """
         self.process_passes_test(self.CustomSubclassType())
     
-    def test_invalid_type_raises_required(self):
-        self.process_raises_test(self.InvalidType(), 'required')
-    
-    def test_invalid_type_raises_optional(self):
-        self.process_raises_test(self.InvalidType(), 'optional')
+    def test_anytype_accepts_anything(self):
+        """ The 'AnyType' type should accept values of any type. """
+        class ArbitraryType(object):
+            """ An arbitrary value type. """
+        
+        arbitrary_value = ArbitraryType()
+        self.process_passes_test(
+            value=ArbitraryType(),
+            expected_type=ioprocess.AnyType,
+            )
 
 class TypeCheckingExtendedTest(object):
     def call_process_method(self, value):
@@ -653,11 +672,41 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
         def accept_value(value):
             raise TypeCheckSuccessError
         self.process_passes_test(self.InvalidType(), accept_value)
+    
+@pytest.mark.typecheck
+class TestTypeCheckingDefaultFunctions(unittest.TestCase):   
+    """ Confirm that default type checking functions behave as expected. """ 
+    def default_function_passes_test(self, value, expected_type):
+        type_checking_function = (
+            ioprocess.default_type_checking_functions[expected_type]
+            )
+        type_checking_function(value)
+    
+    def default_function_raises_test(self, *pargs):
+        with pytest.raises(IOProcessFailureError):
+            self.default_function_passes_test(*pargs)
+    
+    def test_int_gets_int_passes(self):
+        self.default_function_passes_test(123, int)
+    
+    def test_decimal_gets_decimal_passes(self):
+        self.default_function_passes_test(
+            decimal.Decimal('1.23'),
+            decimal.Decimal,
+            )
+    
+    def test_int_gets_bool_fails(self):
+        bool_value = True
+        self.default_function_raises_test(bool_value, int)
+    
+    def test_decimal_gets_bool_fails(self):
+        bool_value = True
+        self.default_function_raises_test(bool_value, decimal.Decimal)
 
 
 
 # ------------------------ Type coercion tests -------------------------
-    
+
 def retrieve_location(location_tuple, container):
     if not isinstance(location_tuple, tuple):
         location_tuple = (location_tuple,)
@@ -675,6 +724,7 @@ def retrieve_location(location_tuple, container):
     
     return retrieve_location(remainder, target_value)
 
+@pytest.mark.coercion
 class TypeCoercionTest(unittest.TestCase):
     def get_coercion_result(self, tspecs=None, iovals=None):
         coercion_functions = self.get_coercion_functions()
@@ -769,7 +819,7 @@ class TestTypeCoercionArguments(TypeCoercionProcessTest):
 
 class TestTypeCoercionRequiredOverridesOptional(TypeCoercionProcessTest):
     """ Confirm that when 'required' and 'optional' are both
-        present, 'required' type objects override 'optional. """
+        present, 'required' overrides 'optional. """
     
     def get_tspecs(self):
         return {
@@ -778,11 +828,10 @@ class TestTypeCoercionRequiredOverridesOptional(TypeCoercionProcessTest):
             }
     
     def get_iovals(self):
-        return {'a': self.NoCoercionType()}
+        return {'a': self.BeforeCoercionType()}
     
     def test_coercion(self):
-        with pytest.raises(IOProcessFailureError):
-            self.get_coercion_result()
+        self.type_test('a', self.YesCoercionType)
 
 class TestTypeCoercionOther(TypeCoercionTest):
     """ Test type coercion situations not covered by other tests. """
@@ -814,90 +863,57 @@ class TestTypeCoercionOther(TypeCoercionTest):
         
         type_obj = ioprocess.ListOf(unicode)
         self.coercion_test(type_obj, trial_list, expected)
-    
-    def test_anytype_accepts_anything(self):
-        """ The 'AnyType' type should accept values of any type, with no
-            coercion. """
-        class ArbitraryType(object):
-            """ An arbitrary value type. """
-        
-        arbitrary_value = ArbitraryType()
-        self.coercion_test(ArbitraryType, arbitrary_value, arbitrary_value)
 
+@pytest.mark.coercion
 class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
     """ Confirm that the default type coercion functions behave as expected. """
     class ArbitraryType(object):
         """ This class is used to test a coercion function's effect upon an
             arbitrarily-typed value. """
     
-    def get_coercion_function_result(self, type_obj, iovalue):
+    def coercion_test(self, type_obj, iovalue, expected):
         coercion_function = self.coercion_functions[type_obj]
-        return coercion_function(iovalue)
-    
-    def coercion_success_test(self, type_obj, iovalue, expected):
-        result = self.get_coercion_function_result(type_obj, iovalue)
+        
+        result = coercion_function(iovalue)
         assert result == expected
     
-    def coercion_success_error_test(self, type_obj, iovalue, expected):
-        """ Used for 'output' coercion functions that must raise a
-            'CoercionSuccessError'. """
-        try:
-            self.get_coercion_function_result(type_obj, iovalue)
-        except ioprocess.CoercionSuccessError as exc:
-            result = exc.result_value
-        else:
-            pytest.fail(
-                "'output' coercion function did not raise a "
-                "'CoercionSuccessError'."
-                )
-        assert result == expected
-    
-    def coercion_failure_test(self, type_obj, iovalue):
-        with pytest.raises(ioprocess.CoercionFailureError):
-            self.get_coercion_function_result(type_obj, iovalue)
-    
-    def arbitrary_type_passes_test(self, type_obj):
+    def arbitrary_value_test(self, type_obj):
+        class ArbitraryType(object):
+            """ An arbitrary type which should pass through coercion
+                unchanged. """
         arbitrary_value = self.ArbitraryType()
-        self.coercion_success_test(type_obj, arbitrary_value, arbitrary_value)
-    
-    def arbitrary_type_raises_test(self, type_obj):
-        arbitrary_value = self.ArbitraryType()
-        self.coercion_failure_test(type_obj, arbitrary_value)
+        self.coercion_test(type_obj, arbitrary_value, arbitrary_value)
 
 class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
-    """ Confirm that input values coerce correctly.
-        
-        The tests for input coercion are more extensive than the tests for
-        output coercion because there is more flexibility about what values are
-        being received as input. During testing, values will mostly be
-        Python-native datatypes; but in production, values will often be string
-        values from JSON input. """
+    """ Confirm that input values coerce correctly. """
     coercion_functions = ioprocess.ioprocess.default_coercion_functions_input
     
     # ------------- Arbitrary types pass with no coercion --------------
     
     def test_unicode_gets_arbitrary_type(self):
-        self.arbitrary_type_passes_test(unicode)
+        self.arbitrary_value_test(unicode)
     
     def test_datetime_gets_arbitrary_type(self):
-        self.arbitrary_type_passes_test(datetime.datetime)
+        self.arbitrary_value_test(datetime.datetime)
     
     def test_uuid_gets_arbitrary_type(self):
-        self.arbitrary_type_passes_test(uuid.UUID)
+        self.arbitrary_value_test(uuid.UUID)
     
     def test_decimal_gets_arbitrary_type(self):
-        self.arbitrary_type_passes_test(decimal.Decimal)
+        self.arbitrary_value_test(decimal.Decimal)
     
-    def test_int_gets_arbitrary_type(self):
-        self.arbitrary_type_passes_test(int)
+    # --------------------- Coercion result tests ----------------------
     
-    # --------------- Situations where coercion succeeds ---------------
+    def test_unicode_gets_str(self):
+        unicode_value = u'abc'
+        str_value = str(unicode_value)
+        self.coercion_test(unicode, str_value, unicode_value)
     
     def test_datetime_gets_string(self):
         """ An ISO-formatted datetime string coerces to a datetime value. """
         dt_value = datetime.datetime.utcnow()
         dt_string = dt_value.isoformat()
-        self.coercion_success_test(
+        self.coercion_test(
             datetime.datetime,
             iovalue=dt_string,
             expected=dt_value,
@@ -906,46 +922,19 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     #def test_dtdate_gets_string(self):
     #    pass
     
-    def test_uuid_gets_string_succeeds(self):
+    def test_uuid_gets_string(self):
         uuid_value = uuid.uuid4()
         uuid_string = str(uuid_value)
-        self.coercion_success_test(
+        self.coercion_test(
             uuid.UUID,
             iovalue=uuid_string,
             expected=uuid_value,
             )
     
-    def test_decimal_gets_int_succeeds(self):
+    def test_decimal_gets_int(self):
         int_value = 123
         decimal_value = decimal.Decimal(int_value)
-        self.coercion_success_test(decimal.Decimal, int_value, decimal_value)
-    
-    def test_unicode_gets_str_succeeds(self):
-        unicode_value = u'abc'
-        str_value = str(unicode_value)
-        self.coercion_success_test(unicode, str_value, unicode_value)
-    
-    # ---------------- Situations where coercion fails -----------------
-    
-    def test_datetime_gets_bad_string_fails(self):
-        bad_string = 'xxx'
-        with pytest.raises(ValueError):
-            dateutil.parser.parse(bad_string)
-        self.coercion_failure_test(datetime.datetime, bad_string)
-    
-    def test_uuid_gets_bad_string_fails(self):
-        bad_string = 'xxx'
-        with pytest.raises(ValueError):
-            uuid.UUID(bad_string)
-        self.coercion_failure_test(uuid.UUID, bad_string)
-    
-    def test_int_gets_bool_fails(self):
-        bool_value = True
-        self.coercion_failure_test(int, bool_value)
-    
-    def test_decimal_gets_bool_fails(self):
-        bool_value = True
-        self.coercion_failure_test(decimal.Decimal, bool_value)
+        self.coercion_test(decimal.Decimal, int_value, decimal_value)
 
 class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
     """ Confirm that values coerce correctly on output.
@@ -954,21 +943,21 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         This is done with JSON-serialization in mind. """
     coercion_functions = ioprocess.ioprocess.default_coercion_functions_output
     
-    # ----------------- Arbitrary types fail coercion ------------------
+    # ------------- Arbitrary types pass with no coercion --------------
     
-    def test_datetime_gets_arbitrary_value(self):
-        self.arbitrary_type_raises_test(datetime.datetime)
+    def test_datetime_gets_arbitrary_type(self):
+        self.arbitrary_value_test(datetime.datetime)
     
-    def test_uuid_gets_arbitrary_value(self):
-        self.arbitrary_type_raises_test(uuid.UUID)
+    def test_uuid_gets_arbitrary_type(self):
+        self.arbitrary_value_test(uuid.UUID)
     
-    # --------------- Situations where coercion succeeds ---------------
+    # --------------------- Coercion result tests ----------------------
     
     def test_datetime_to_string(self):
         """ 'datetime' values should coerce to ISO-8601-formatted strings. """
         dt_value = datetime.datetime.utcnow()
         dt_string = dt_value.isoformat()
-        self.coercion_success_error_test(
+        self.coercion_test(
             datetime.datetime,
             iovalue=dt_value,
             expected=dt_string,
@@ -984,12 +973,13 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         """ UUID values coerce to strings on output. """
         uuid_value = uuid.uuid4()
         uuid_string = str(uuid_value)
-        self.coercion_success_error_test(
+        self.coercion_test(
             uuid.UUID,
             iovalue=uuid_value,
             expected=uuid_string,
             )
 
+@pytest.mark.coercion
 class TestTypeCoercionCycle(unittest.TestCase):
     """ Confirm that certain types are preserved through the coercion 'cycle'.
         
