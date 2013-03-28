@@ -30,7 +30,7 @@ class ProcessTest(unittest.TestCase):
         pass
     
     def good_iovals_test(self, iovals):
-        IOProcessor().process(iovals, **self.trial_tspecs())
+        IOProcessor().verify(iovals, **self.trial_tspecs())
     
     def bad_iovals_test(self, iovals):
         with pytest.raises(InvalidIOValuesError):
@@ -550,7 +550,7 @@ class TestTypeCheckingBasic(TypeCheckingTest):
             expected_type = self.CustomType
         
         ioprocessor = IOProcessor()
-        ioprocessor.process(
+        ioprocessor.verify(
             iovals={'a': value},
             **{tspec_kind: {'a': expected_type}}
             )
@@ -605,7 +605,7 @@ class TypeCheckingExtendedTest(object):
             'a': self.make_extended_tspec()
             }
         
-        ioprocessor.process(
+        ioprocessor.verify(
             iovals=iovals,
             required=required
             )
@@ -644,7 +644,7 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
         ioprocessor = IOProcessor(
             type_checking_functions={self.CustomType: custom_function}
             )
-        ioprocessor.process(
+        ioprocessor.verify(
             iovals={'a': self.CustomType()},
             required={'a': self.CustomType}
             )
@@ -740,7 +740,7 @@ class TypeCoercionTest(unittest.TestCase):
         tspecs = tspecs or self.get_tspecs()
         iovals = iovals or self.get_iovals()
         
-        return ioprocessor.process(iovals, **tspecs)
+        return ioprocessor.coerce(iovals, **tspecs)
     
     def get_result_value(self, location, **kwargs):
         result_dict = self.get_coercion_result(**kwargs)
@@ -758,7 +758,7 @@ class TypeCoercionTest(unittest.TestCase):
         assert result_value == expected_value
 
 class TypeCoercionProcessTest(TypeCoercionTest):
-    """ A test to confirm that calling IOProcessor.process() uses the coercion
+    """ A test to confirm that calling IOProcessor.coerce() uses the coercion
         functions (provided by the 'coercion_functions' argument) correctly. """
     
     class BeforeCoercionType(object):
@@ -997,12 +997,12 @@ class TestTypeCoercionCycle(unittest.TestCase):
         
         tspec =  {'value': type_obj}
         
-        output_result = output_processor.process(
+        output_result = output_processor.coerce(
             iovals={'value': starting_value},
             required=tspec,
             )
         
-        final_result = input_processor.process(
+        final_result = input_processor.coerce(
             iovals=output_result,
             required=tspec,
             )
