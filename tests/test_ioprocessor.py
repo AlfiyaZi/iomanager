@@ -10,7 +10,11 @@ import unittest
 
 import ioprocess
 from ioprocess import IOProcessor
-from ioprocess.ioprocess import IOProcessFailureError
+from ioprocess.ioprocess import (
+    IOProcessFailureError,
+    TypeCheckSuccessError,
+    TypeCheckFailureError,
+    )
 
 _NotSet = object()
 
@@ -517,6 +521,141 @@ class TestStructuredRequiredOverridesOptional(ProcessTest):
 
 
 
+# ---------------------- Type checking tests -----------------------
+
+@pytest.mark.a
+class TypeCheckingTest(unittest.TestCase):
+    """ Confirm that coercion behaves correctly when the tspec 'type object' is
+        a 'class' object. """
+    
+    class CustomType(object):
+        """ A custom type for testing type-checking. """
+    
+    class CustomSubclassType(CustomType):
+        """ A custom type for testing type-checking. """
+    
+    class InvalidType(object):
+        """ A custom type for testing type-checking. """
+
+class TestTypeCheckingBasic(TypeCheckingTest):
+    def get_process_result(self, value, tspec_kind='required'):
+        ioprocessor = IOProcessor()
+        ioprocessor.process(
+            iovals={'a': value},
+            **{tspec_kind: {'a': self.CustomType}}
+            )
+    
+    def process_passes_test(self, *pargs):
+        self.get_process_result(*pargs)
+    
+    def process_raises_test(self, *pargs):
+        with pytest.raises(IOProcessFailureError):
+            self.process_passes_test(*pargs)
+    
+    def test_none_value_passes(self):
+        self.process_passes_test(None)
+    
+    def test_correct_type_passes(self):
+        self.process_passes_test(self.CustomType())
+    
+    def test_correct_type_passes_subclass(self):
+        """ Confirm that an instance of a subclass of the specified type passes
+            coercion.
+            
+            In order to change this behavior to reject subclasses, the user
+            should use the 'type_checking_functions' attribute. """
+        self.process_passes_test(self.CustomSubclassType())
+    
+    def test_invalid_type_raises_required(self):
+        self.process_raises_test(self.InvalidType(), 'required')
+    
+    def test_invalid_type_raises_optional(self):
+        self.process_raises_test(self.InvalidType(), 'optional')
+
+class TypeCheckingExtendedTest(object):
+    def call_process_method(self, value):
+        ioprocessor = IOProcessor()
+        
+        iovals = {
+            'a': self.make_extended_ioval(value)
+            }
+        
+        required = {
+            'a': self.make_extended_tspec()
+            }
+        
+        ioprocessor.process(
+            iovals=iovals,
+            required=required
+            )
+    
+    def test_correct_type_passes(self):
+        self.call_process_method(self.CustomType())
+    
+    def test_invalid_type_raises(self):
+        with pytest.raises(IOProcessFailureError):
+            self.call_process_method(self.InvalidType())
+
+class TestTypeCheckingStructured(TypeCheckingTest, TypeCheckingExtendedTest):
+    """ Confirm that type checking is occurring when the tspec 'type object' is
+        a dictionary. """
+    
+    def make_extended_ioval(self, value):
+        return {'b': value}
+    
+    def make_extended_tspec(self):
+        return {'b': self.CustomType}
+
+class TestTypeCheckingListOf(TypeCheckingTest, TypeCheckingExtendedTest):
+    """ Confirm that type checking is occurring when the tspec 'type object' is
+        a ListOf instance. """
+    
+    def make_extended_ioval(self, value):
+        return [value]
+    
+    def make_extended_tspec(self):
+        return ioprocess.ListOf(self.CustomType)
+
+class TestTypeCheckingCustomFunction(TypeCheckingTest):
+    """ Confirm type checking behavior when custom type-checking functions are
+        in use. """
+    def get_process_result(self, value, custom_function):
+        ioprocessor = IOProcessor(
+            type_checking_functions={self.CustomType: custom_function}
+            )
+        ioprocessor.process(
+            iovals={'a': self.CustomType()},
+            required={'a': self.CustomType}
+            )
+    
+    def process_passes_test(self, *pargs):
+        self.get_process_result(*pargs)
+    
+    def process_raises_test(self, *pargs):
+        with pytest.raises(IOProcessFailureError):
+            self.process_passes_test(*pargs)
+    
+    def test_type_check_failure_error(self):
+        """ When a custom type-checking function raises a TypeCheckFailureError,
+            type checking fails even if the value would have passed type
+            checking normally.
+            
+            This can be used for 'subclass rejection'. For example: 'int' type
+            rejects 'bool' values. """
+        def reject_value(value):
+            raise TypeCheckFailureError
+        self.process_raises_test(self.CustomType(), reject_value)
+    
+    def test_type_check_success_error(self):
+        """ When a custom type-checking function raises a TypeCheckSuccessError,
+            type checking passes even if the value would have been rejected
+            normally. """
+        def accept_value(value):
+            raise TypeCheckSuccessError
+        self.process_passes_test(self.InvalidType(), accept_value)
+
+
+
 # ------------------------ Type coercion tests -------------------------
     
 def retrieve_location(location_tuple, container):
@@ -576,68 +715,16 @@ class TypeCoercionProcessTest(TypeCoercionTest):
     class NoCoercionType(object):
         """ No coercion function is assigned to this type. """
     
-    class NoCoercionTypeSubclass(NoCoercionType):
-        """ A subclass of NoCoercionType. Instances of this subclass should be
-            accepted for tspec items that specify 'NoCoercionType'. """
-    
-    class BadCoercionFunctionType(object):
-        """ The coercion function for this type is written incorrectly; it
-            does not raise an exception when coercion fails. Instead, it simply
-            returns the un-coerced value. """
-    
-    class ConditionalRejectionType(object):
-        """ This type rejects values that do not fit certain conditions.
-            
-            Values are rejected by raising 'CoercionFailureError'.
-            
-            The 'UUID' type is an example of this behavior. 'UUID' rejects
-            strings that are not properly-formatted UUID values. """
-        BAD_VALUE = object()
-    
-    class SpecialResultType(object):
-        """ This type hasa coercion function that returns a value which is NOT
-            OF THIS TYPE.
-            
-            This behavior is seen in 'output' coercion functions.
-            
-            Example:
-                'datetime' coerces to an ISO-8601-formatted 'str' value for
-                output. """
-        RESULT_VALUE = object()
-    
-    class InvalidType(object):
-        """ A type that should be rejected by coercion. """
-    
     def coerce_yescoerciontype(self, ioval):
         if isinstance(ioval, self.BeforeCoercionType):
             return self.YesCoercionType()
         
         return ioval
     
-    def coerce_badcoercionfunctiontype(self, ioval):
-        return ioval
-    
-    def coerce_conditionalrejectiontype(self, ioval):
-        if ioval == self.ConditionalRejectionType.BAD_VALUE:
-            raise ioprocess.CoercionFailureError
-        
-        return ioval
-    
-    def coerce_specialresulttype(self, ioval):
-        if isinstance(ioval, self.SpecialResultType):
-            raise ioprocess.CoercionSuccessError(
-                self.SpecialResultType.RESULT_VALUE
-                )
-        
-        raise ioprocess.CoercionFailureError
-    
     def get_coercion_functions(self):
         
         return {
             self.YesCoercionType: self.coerce_yescoerciontype,
-            self.BadCoercionFunctionType: self.coerce_badcoercionfunctiontype,
-            self.ConditionalRejectionType: self.coerce_conditionalrejectiontype,
-            self.SpecialResultType: self.coerce_specialresulttype,
         }
 
 class TestTypeCoercionArguments(TypeCoercionProcessTest):
@@ -696,144 +783,6 @@ class TestTypeCoercionRequiredOverridesOptional(TypeCoercionProcessTest):
     def test_coercion(self):
         with pytest.raises(IOProcessFailureError):
             self.get_coercion_result()
-
-class TestTypeCoercionTypeObjectClass(TypeCoercionProcessTest):
-    """ Confirm that coercion behaves correctly when the tspec 'type object' is
-        a 'class' object. """
-    
-    def get_tspecs(self):
-        return {
-            'optional': {
-                'a': self.YesCoercionType,
-                'b': self.NoCoercionType,
-                'c': self.BadCoercionFunctionType,
-                'd': self.ConditionalRejectionType,
-                'e': self.SpecialResultType,
-                }
-            }
-    
-    def none_value_test(self, argument_key):
-        """ None values pass coercion. """
-        iovals = {argument_key: None}
-        self.value_test(argument_key, expected_value=None, iovals=iovals)
-    
-    def correct_type_test(self, argument_key):
-        """ Instances of the type specified in the tspec pass coercion. """
-        correct_type = self.get_tspecs()['optional'][argument_key]
-        iovals = {argument_key: correct_type()}
-        self.type_test(argument_key, expected_type=correct_type, iovals=iovals)
-    
-    def invalid_type_test(self, argument_key):
-        """ Instances of an invalid type which cannot be coerced should raise an
-            appropriate error. """
-        iovals = {argument_key: self.InvalidType()}
-        with pytest.raises(IOProcessFailureError):
-            self.get_coercion_result(iovals=iovals)
-    
-    def test_none_value_passes_yes_coercion(self):
-        self.none_value_test('a')
-    
-    def test_none_value_passes_no_coercion(self):
-        self.none_value_test('b')
-    
-    def test_correct_type_passes_yes_coercion(self):
-        self.correct_type_test('a')
-    
-    def test_correct_type_passes_no_coercion(self):
-        self.correct_type_test('b')
-    
-    def test_correct_type_passes_subclass(self):
-        """ Confirm that an instance of a subclass of the specified type passes
-            coercion.
-            
-            If the user wants to change this behavior so that subclasses are
-            rejected, then that should be handled by the coercion function. """
-        iovals = {'b': self.NoCoercionTypeSubclass()}
-        self.type_test(
-            'b',
-            expected_type=self.NoCoercionTypeSubclass,
-            iovals=iovals,
-            )
-    
-    def test_invalid_type_raises_yes_coercion(self):
-        self.invalid_type_test('a')
-    
-    def test_invalid_type_raises_no_coercion(self):
-        self.invalid_type_test('b')
-    
-    def test_invalid_type_raises_bad_coercion_function(self):
-        """ Confirm that when a coercion function is written incorrectly (so
-            that it returns uncoerced values), an appropriate error is still
-            raised when a value of invalid type is provided. """
-        self.invalid_type_test('c')
-    
-    def test_bad_value_raises_conditional_rejection(self):
-        """ Confirm that when a coercion function raises a
-            'CoercionFailureError', the calling scope correctly handles this
-            situation and raises the further appropriate error. """
-        iovals = {'d': self.ConditionalRejectionType.BAD_VALUE}
-        with pytest.raises(IOProcessFailureError):
-            self.get_coercion_result(iovals=iovals)
-    
-    def test_special_result_passes(self):
-        """ Confirm that when a coercion functino raises a
-            'CoercionSuccessError', the calling scope correctly handles this
-            situation and the correct result is returned. """
-        iovals = {'e': self.SpecialResultType()}
-        result = self.get_result_value('e', iovals=iovals)
-        assert result == self.SpecialResultType.RESULT_VALUE
-
-class TestTypeCoercionTypeObjectStructured(TypeCoercionProcessTest):
-    """ Confirm that coercion is occurring when the tspec 'type object' is a
-        dictionary. """
-    
-    def get_tspecs(self):
-        return {
-            'required': {
-                'a': {
-                    'b': self.YesCoercionType,
-                    }
-                }
-            }
-    
-    def get_iovals(self):
-        return {
-            'a': {
-                'b': self.BeforeCoercionType(),
-                }
-            }
-    
-    def test_coercion(self):
-        self.type_test(('a', 'b'), expected_type=self.YesCoercionType)
-    
-    def test_invalid_type_raises(self):
-        with pytest.raises(IOProcessFailureError):
-            iovals = {'a': [self.InvalidType()]}
-            self.get_coercion_result(iovals=iovals)
-
-class TestTypeCoercionTypeObjectListof(TypeCoercionProcessTest):
-    """ Confirm that coercion is occurring when the tspec 'type object' is a
-        ListOf instance. """
-    
-    def get_tspecs(self):
-        return {
-            'required': {
-                'a': ioprocess.ListOf(self.YesCoercionType),
-                }
-            }
-    
-    def get_iovals(self):
-        return {
-            'a': [self.BeforeCoercionType()]
-            }
-    
-    def test_coercion(self):
-        self.type_test(('a', 0), expected_type=self.YesCoercionType)
-    
-    def test_invalid_type_raises(self):
-        with pytest.raises(IOProcessFailureError):
-            iovals = {'a': {'b': self.InvalidType()}}
-            self.get_coercion_result(iovals=iovals)
 
 class TestTypeCoercionOther(TypeCoercionTest):
     """ Test type coercion situations not covered by other tests. """

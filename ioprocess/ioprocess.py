@@ -62,6 +62,12 @@ class CoercionFailureResultDictError(CoercionFailureResultError):
     def __init__(self, failure_dict):
         self.failure_result = failure_dict
 
+class TypeCheckFailureError(Error):
+    pass
+
+class TypeCheckSuccessError(Error):
+    pass
+
 
 
 # ----------------------- Custom parameter types -----------------------

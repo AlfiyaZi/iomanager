@@ -7,8 +7,6 @@ from ioprocess import (
     combine_tspecs,
     )
 
-pytestmark = pytest.mark.a
-
 class ResultTest(object):
     """ Confirm that the result dictionary is compatible with the
         'IOProcessor.process' method parameters. """
