@@ -16,33 +16,9 @@ import uuid
 class Error(Exception):
     """ Base class for errors. """
 
-class IOProcessFailureError(Error):
+class InvalidIOValuesError(Error):
     """ The 'iovals_dict' value submitted for processing did not conform to the
         provided 'tspec' values. """
-
-class CoercionFailureError(Error):
-    """ Raised by a coercion function on failure.
-        
-        Indicates one of the following:
-        - The ioval cannot be coerced to the expected type.
-            Example: Incorrectly formatted datetime string.
-        - The ioval is invalid for the expected type.
-            Example: 'bool' value provided for 'int' expected type.
-        
-        Raising this error should result in a TypeCoercionFailure error being
-        raised by the calling scope. """
-
-class CoercionSuccessError(Error):
-    """ Raised by a coercion function on success.
-        
-        Raising this error skips the 'isinstance()' check. This allows coercion
-        functions to return values not of the 'expected' type.
-        
-        This behavior is intended ONLY FOR OUTPUT coercion functions. The
-        purpose is to allow coercion to produce specially-formatted strings for
-        output, with JSON-serialization in mind. """
-    def __init__(self, result_value):
-        self.result_value = result_value
 
 class CoercionFailureResultError(Error):
     """ An 'ioval' value could not be coerced to the expected type.
@@ -145,17 +121,9 @@ def coerce_unicode_input(ioval):
     
     return unicode(ioval)
 
-def coerce_int_input(ioval):
-    if isinstance(ioval, bool):
-        raise CoercionFailureError
-    
-    return ioval
-
 def coerce_decimal_input(ioval):
     if not isinstance(ioval, int):
         return ioval
-    if isinstance(ioval, bool):
-        raise CoercionFailureError
     
     return decimal.Decimal(ioval)
 
@@ -166,7 +134,9 @@ def coerce_uuid_input(ioval):
     try:
         return uuid.UUID(ioval)
     except ValueError:
-        raise CoercionFailureError
+        pass
+    
+    return ioval
 
 def coerce_datetime_input(ioval):
     if not isinstance(ioval, basestring):
@@ -175,29 +145,28 @@ def coerce_datetime_input(ioval):
     try:
         return dateutil.parser.parse(ioval)
     except ValueError:
-        raise CoercionFailureError
+        pass
+    
+    return ioval
 
 default_coercion_functions_input = {
     unicode: coerce_unicode_input,
-    int: coerce_int_input,
     decimal.Decimal: coerce_decimal_input,
     uuid.UUID: coerce_uuid_input,
     datetime.datetime: coerce_datetime_input,
     }
 
 def coerce_uuid_output(ioval):
-    if isinstance(ioval, uuid.UUID):
-        result = str(ioval)
-        raise CoercionSuccessError(result)
+    if not isinstance(ioval, uuid.UUID):
+        return ioval
     
-    raise CoercionFailureError
+    return str(ioval)
 
 def coerce_datetime_output(ioval):
-    if isinstance(ioval, datetime.datetime):
-        result = ioval.isoformat()
-        raise CoercionSuccessError(result)
+    if not isinstance(ioval, datetime.datetime):
+        return ioval
     
-    raise CoercionFailureError
+    return ioval.isoformat()
 
 default_coercion_functions_output = {
     uuid.UUID: coerce_uuid_output,
@@ -281,7 +250,7 @@ class IOProcessor(object):
         
         err_msg = ('Invalid RPC arguments.\n' + '\n'.join(err_msg_parts))
         
-        raise IOProcessFailureError(err_msg)
+        raise InvalidIOValuesError(err_msg)
     
     def coerce_ioval(self, ioval, expected_type, nonetype_ok=True):
         # Coerce container types.
@@ -294,10 +263,7 @@ class IOProcessor(object):
         # Coerce non-container types.
         if expected_type in self.coercion_functions:
             coercion_function = self.coercion_functions[expected_type]
-            try:
-                result = coercion_function(ioval)
-            except CoercionFailureError:
-                raise CoercionFailureResultError(expected_type, ioval)
+            result = coercion_function(ioval)
         else:
             result = ioval
         
@@ -331,8 +297,6 @@ class IOProcessor(object):
                     expected_type,
                     nonetype_ok,
                     )
-            except CoercionSuccessError as exc:
-                result_iovals[key] = exc.result_value
             except CoercionFailureResultError as exc:
                 failure_dict[key] = exc.failure_result
         

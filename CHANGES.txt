@@ -10,3 +10,6 @@ v0.2.1, 2013-03-27 -- 'process' parameters.
   backwards compatible.
 - Add tests for 'tspecs_from_callable' function.
 - Add 'IOProcessFailureError', 'combine_tspecs' to package-level namespace.
+
+v0.2.2, YYYY-MM-DD -- ???
+- Rename 'IOProcessFailureError' to 'InvalidIOValuesError'.
