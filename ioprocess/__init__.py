@@ -1,5 +1,5 @@
 from ioprocess import (
-    InvalidIOValuesError,
+    VerificationFailureError,
     AnyType,
     ListOf,
     IOProcessor,

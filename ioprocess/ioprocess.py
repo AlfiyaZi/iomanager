@@ -16,7 +16,7 @@ import uuid
 class Error(Exception):
     """ Base class for errors. """
 
-class InvalidIOValuesError(Error):
+class VerificationFailureError(Error):
     """ The 'iovals_dict' value submitted for processing did not conform to the
         provided 'tspec' values. """
 
@@ -77,11 +77,14 @@ class ListOf(object):
 
 # --------------------------- Useful things ----------------------------
 
-class NotSet(object):
+class NotProvided(object):
     """ Value when an argument or parameter is not given. """
 
 class NoDifference(object):
-    """ Return value when a 'difference' function returns no difference. """
+    """ Return value when a 'difference' function returns no difference.
+        
+        This is necessary so that 'difference_item', 'difference_dict' and
+        'difference_list' can all return the same value. """
 
 class UnknownDict(object):
     """ Used to generate succinct error messages when a not-allowed keyword
@@ -181,7 +184,7 @@ class IOProcessor(object):
     def __init__(self, coercion_functions={}):
         self.coercion_functions = coercion_functions.copy()
     
-    def process(
+    def verify(
         self,
         iovals,
         required={},
@@ -203,6 +206,9 @@ class IOProcessor(object):
             missing = {}
         
         if unlimited:
+            """ When 'unlimited=True', only top-level keys are unlimited.
+                Verification still occurs recursively for keys specified in the
+                'combined_tspec'. """
             possibly_unknown_keys = (
                 set(iovals_dict.keys()) & set(combined_tspec.keys())
                 )
@@ -223,17 +229,11 @@ class IOProcessor(object):
         if unknown is NoDifference:
             unknown = {}
         
-        # Coerce input values
-        try:
-            result_dict = self.coerce_dict(iovals_dict, combined_tspec)
-        except CoercionFailureResultError as exc:
-            result_dict = None
-            wrong_types = exc.failure_result
-        else:
-            wrong_types = {}
+        # IMPLEMENT TYPE CHECKING HERE
+        wrong_types = {}
         
         if not (missing or unknown or wrong_types):
-            return result_dict
+            return
         
         missing_output = make_missing_output(missing)
         
@@ -250,7 +250,19 @@ class IOProcessor(object):
         
         err_msg = ('Invalid RPC arguments.\n' + '\n'.join(err_msg_parts))
         
-        raise InvalidIOValuesError(err_msg)
+        raise VerificationFailureError(err_msg)
+    
+    def coerce(
+        self,
+        iovals,
+        required={},
+        optional={},
+        ):
+        iovals_dict = iovals.copy()
+        required_tspec = required.copy()
+        optional_tspec = optional.copy()
+        combined_tspec = combine_tspecs(required_tspec, optional_tspec)
+        return self.coerce_dict(iovals_dict, combined_tspec)
     
     def coerce_ioval(self, ioval, expected_type, nonetype_ok=True):
         # Coerce container types.
@@ -360,7 +372,7 @@ def tspecs_from_callable(callable_obj):
 def make_dict_from_list(list_obj):
     return dict(zip(range(len(list_obj)), list_obj))
 
-def difference_item(item_a, item_b=NotSet, comparison=None):
+def difference_item(item_a, item_b=NotProvided, comparison=None):
     if comparison is None:
         raise TypeError("'comparison' is a required parameter.")
     
@@ -368,18 +380,18 @@ def difference_item(item_a, item_b=NotSet, comparison=None):
         if isinstance(item_b, dict):
             return difference_dict(item_a, item_b, comparison)
         if comparison == 'unknown':
-            if item_b is NotSet:
+            if item_b is NotProvided:
                 return UnknownDict()
     elif isinstance(item_a, (list, ListOf)):
         if isinstance(item_b, (list, ListOf)):
             return difference_list(item_a, item_b, comparison)
         if comparison == 'unknown':
-            if item_b is NotSet:
+            if item_b is NotProvided:
                 return UnknownList()
     
     # 'item_a' is a type object or a builtin instance.
     
-    if item_b is NotSet:
+    if item_b is NotProvided:
         return item_a
     
     return NoDifference
@@ -398,7 +410,7 @@ def difference_dict(dict_a, dict_b, comparison):
     result = {}
     
     for ikey, item_a in dict_a.items():
-        item_b = dict_b.get(ikey, NotSet)
+        item_b = dict_b.get(ikey, NotProvided)
         item_result = difference_item(item_a, item_b, comparison)
         if item_result is not NoDifference:
             result[ikey] = item_result

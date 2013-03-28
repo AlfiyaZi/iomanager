@@ -9,7 +9,7 @@ from ioprocess import (
 
 class ResultTest(object):
     """ Confirm that the result dictionary is compatible with the
-        'IOProcessor.process' method parameters. """
+        'IOProcessor.verify' method parameters. """
     def test_result(self):
         result = tspecs_from_callable(self.callable)
         
@@ -18,7 +18,7 @@ class ResultTest(object):
             for ikey in item:
                 iovals.setdefault(ikey, None)
         
-        IOProcessor().process(iovals, **result)
+        IOProcessor().verify(iovals, **result)
 
 class TspecValueTest(unittest.TestCase):
     def tspec_value_test(self, tspec_name, expected_list):

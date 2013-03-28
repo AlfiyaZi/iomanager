@@ -12,4 +12,4 @@ v0.2.1, 2013-03-27 -- 'process' parameters.
 - Add 'IOProcessFailureError', 'combine_tspecs' to package-level namespace.
 
 v0.2.2, YYYY-MM-DD -- ???
-- Rename 'IOProcessFailureError' to 'InvalidIOValuesError'.
+- Rename 'IOProcessFailureError' to 'VerificationFailureError'.

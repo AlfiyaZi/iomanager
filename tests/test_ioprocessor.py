@@ -11,7 +11,7 @@ import unittest
 import ioprocess
 from ioprocess import IOProcessor
 from ioprocess.ioprocess import (
-    InvalidIOValuesError,
+    VerificationFailureError,
     TypeCheckSuccessError,
     TypeCheckFailureError,
     )
@@ -33,7 +33,7 @@ class ProcessTest(unittest.TestCase):
         IOProcessor().verify(iovals, **self.trial_tspecs())
     
     def bad_iovals_test(self, iovals):
-        with pytest.raises(InvalidIOValuesError):
+        with pytest.raises(VerificationFailureError):
             self.good_iovals_test(iovals)
     
     def trial_tspecs(self):
@@ -559,7 +559,7 @@ class TestTypeCheckingBasic(TypeCheckingTest):
         self.get_process_result(*pargs, **kwargs)
     
     def process_raises_test(self, *pargs, **kwargs):
-        with pytest.raises(InvalidIOValuesError):
+        with pytest.raises(VerificationFailureError):
             self.process_passes_test(*pargs, **kwargs)
     
     def test_invalid_type_raises_required(self):
@@ -614,7 +614,7 @@ class TypeCheckingExtendedTest(object):
         self.call_process_method(self.CustomType())
     
     def test_invalid_type_raises(self):
-        with pytest.raises(InvalidIOValuesError):
+        with pytest.raises(VerificationFailureError):
             self.call_process_method(self.InvalidType())
 
 class TestTypeCheckingStructured(TypeCheckingTest, TypeCheckingExtendedTest):
@@ -653,7 +653,7 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
         self.get_process_result(*pargs)
     
     def process_raises_test(self, *pargs):
-        with pytest.raises(InvalidIOValuesError):
+        with pytest.raises(VerificationFailureError):
             self.process_passes_test(*pargs)
     
     @pytest.mark.xfail
@@ -688,7 +688,7 @@ class TestTypeCheckingDefaultFunctions(unittest.TestCase):
         type_checking_function(value)
     
     def default_function_raises_test(self, *pargs):
-        with pytest.raises(InvalidIOValuesError):
+        with pytest.raises(VerificationFailureError):
             self.default_function_passes_test(*pargs)
     
     def test_int_gets_int_passes(self):
@@ -811,16 +811,6 @@ class TestTypeCoercionArguments(TypeCoercionProcessTest):
     
     def test_coercion_optional(self):
         self.coercion_argument_test('optional')
-    
-    def test_coercion_required_unlimited(self):
-        """ Coercion occurs when 'unlimited' is used with 'required'. """
-        tspecs = self.make_tspecs('required', unlimited=True)
-        self.coercion_test(tspecs)
-    
-    def test_coercion_optional_unlimited(self):
-        """ Coercion occurs when 'unlimited' is used with 'optional'. """
-        tspecs = self.make_tspecs('optional', unlimited=True)
-        self.coercion_test(tspecs)
 
 class TestTypeCoercionRequiredOverridesOptional(TypeCoercionProcessTest):
     """ Confirm that when 'required' and 'optional' are both
