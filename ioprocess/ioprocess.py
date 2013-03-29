@@ -260,8 +260,7 @@ class IOProcessor(object):
     def verify_type(self, ioval, expected_type, nonetype_ok=True):
         # Verify container types.
         if isinstance(expected_type, dict):
-            self.coerce_dict(ioval, expected_type)
-            #self.verify_dict(ioval, expected_type)
+            self.verify_dict(ioval, expected_type)
             return
         
         if isinstance(expected_type, ListOf):
@@ -279,7 +278,24 @@ class IOProcessor(object):
         raise CoercionFailureResultError(expected_type, ioval)
     
     def verify_dict(self, iovals_dict, tspec, nonetype_ok=True):
-        pass
+        if not isinstance(iovals_dict, dict):
+            raise CoercionFailureResultError(dict, iovals_dict)
+        
+        wrong_types = {}
+        
+        for key, ioval in iovals_dict.items():
+            if key not in tspec:
+                continue
+            
+            expected_type = tspec[key]
+            
+            try:
+                self.verify_type(ioval, expected_type, nonetype_ok)
+            except CoercionFailureResultError as exc:
+                wrong_types[key] = exc.failure_result
+        
+        if wrong_types:
+            raise CoercionFailureResultDictError(wrong_types)
     
     def verify_list(self, iovals_list, listof):
         pass
