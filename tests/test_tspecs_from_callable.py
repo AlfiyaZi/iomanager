@@ -13,6 +13,8 @@ class ResultTest(object):
     def test_result(self):
         result = tspecs_from_callable(self.callable)
         
+        # Construct dummy iovals. For each key in 'required', 'optional', set
+        # that key value to 'None' in the dummy ioval.
         iovals = {}
         for item in result.itervalues():
             for ikey in item:

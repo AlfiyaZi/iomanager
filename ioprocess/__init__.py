@@ -3,6 +3,7 @@ from ioprocess import (
     AnyType,
     ListOf,
     IOProcessor,
+    IOManager,
     input_processor,
     output_processor,
     combine_tspecs,

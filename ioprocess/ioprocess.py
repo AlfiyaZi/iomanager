@@ -335,7 +335,7 @@ class IOProcessor(object):
             pass
         else:
             try:
-                typecheck_function(expected_type)
+                typecheck_function(ioval, expected_type)
             except TypeCheckSuccessError:
                 return
             except TypeCheckFailureError:
@@ -446,6 +446,84 @@ def input_processor():
 
 def output_processor():
     return IOProcessor(coercion_functions=default_coercion_functions_output)
+
+class IOManager(object):
+    def __init__(self, **kwargs):
+        attr_names = [
+            'coercion_functions',
+            'input_coercion_functions',
+            'output_coercion_functions',
+            'typecheck_functions',
+            'input_typecheck_functions',
+            'output_typecheck_functions',
+            ]
+        
+        attributes = {}
+        
+        for ikey, ivalue in kwargs.iteritems():
+            if ikey not in attr_names:
+                raise TypeError(
+                    "__init__() got an unexpected keyword argument '{}'"
+                    .format(ikey)
+                    )
+            attributes[ikey] = ivalue
+        
+        for attr_name, attr_value in attributes.iteritems():
+            setattr(self, attr_name, attr_value)
+    
+    def make_ioprocessor(self, kind):
+        """ coerce(), then verify(). """
+        init_parts = {
+            'coercion_functions': (
+                '{}_coercion_functions'.format(kind),
+                'coercion_functions'
+                ),
+            'typecheck_functions': (
+                '{}_typecheck_functions'.format(kind),
+                'typecheck_functions',
+                ),
+        }
+        init_kwargs = {}
+        for init_key, attr_names in init_parts.iteritems():
+            for attr_name in attr_names:
+                try:
+                    init_kwargs[init_key] = getattr(self, attr_name)
+                except AttributeError:
+                    continue
+                else:
+                    break
+        
+        return IOProcessor(**init_kwargs)
+    
+    def process_input(
+        self,
+        iovals,
+        required={},
+        optional={},
+        unlimited=False,
+        ):
+        """ coerce(), then verify(). """
+        ioprocessor = self.make_ioprocessor('input')
+        
+        coerced_iovals = ioprocessor.coerce(iovals, required, optional)
+        ioprocessor.verify(coerced_iovals, required, optional, unlimited)
+        
+        return coerced_iovals
+    
+    def process_output(
+        self,
+        iovals,
+        required={},
+        optional={},
+        unlimited=False,
+        ):
+        """ verify(), then coerce(). """
+        ioprocessor = self.make_ioprocessor('output')
+        
+        ioprocessor.verify(iovals, required, optional, unlimited)
+        coerced_iovals = ioprocessor.coerce(iovals, required, optional)
+        
+        return coerced_iovals
 
 
 

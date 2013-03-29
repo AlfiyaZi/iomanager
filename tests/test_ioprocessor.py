@@ -9,7 +9,10 @@ import uuid
 import unittest
 
 import ioprocess
-from ioprocess import IOProcessor
+from ioprocess import (
+    IOProcessor,
+    IOManager,
+    )
 from ioprocess.ioprocess import (
     VerificationFailureError,
     TypeCheckSuccessError,
@@ -669,7 +672,7 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
             
             This can be used for 'subclass rejection'. For example: 'int' type
             rejects 'bool' values. """
-        def reject_value(value):
+        def reject_value(value, expected_type):
             raise TypeCheckFailureError
         self.process_raises_test(self.CustomType(), reject_value)
     
@@ -677,7 +680,7 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
         """ When a custom type-checking function raises a TypeCheckSuccessError,
             type checking passes even if the value would have been rejected
             normally. """
-        def accept_value(value):
+        def accept_value(value, expected_type):
             raise TypeCheckSuccessError
         self.process_passes_test(self.InvalidType(), accept_value)
 
@@ -999,7 +1002,7 @@ class IOManagerTest(unittest.TestCase):
         ):
         method_name = 'process_' + process_kind
         process_method = getattr(iomanager, method_name)
-        result == process_method(iovals, required=tspec)
+        result = process_method(iovals, required=tspec)
         assert result == expected
 
 class TestIOManagerProcessBasic(IOManagerTest):
@@ -1035,7 +1038,7 @@ class TestIOManagerProcessCoercion(IOManagerTest):
         expected
         ):
         iomanager = IOManager(
-            coercion_functions={InternalType: coercion_function}
+            coercion_functions={self.InternalType: coercion_function}
             )
         
         tspec = {'a': self.InternalType}
@@ -1043,23 +1046,23 @@ class TestIOManagerProcessCoercion(IOManagerTest):
         self.process_test(iomanager, process_kind, tspec, iovals, expected)
     
     def test_process_input(self):
-        expected_value = InternalType()
+        expected_value = self.InternalType()
         
         def coercion_function(value):
             return expected_value
         
-        iovals = {'a': ExternalType()}
+        iovals = {'a': self.ExternalType()}
         expected = {'a': expected_value}
         
         self.yes_coercion_test('input', coercion_function, iovals, expected)
     
     def test_process_output(self):
-        expected_value = ExternalType()
+        expected_value = self.ExternalType()
         
         def coercion_function(value):
             return expected_value
         
-        iovals = {'a': InternalType()}
+        iovals = {'a': self.InternalType()}
         expected = {'a': expected_value}
         
         self.yes_coercion_test('output', coercion_function, iovals, expected)
@@ -1069,7 +1072,7 @@ class TestIOManagerProcessTypecheck(IOManagerTest):
         class ExpectedType(object):
             pass
         
-        def reject_all(value):
+        def reject_all(value, expected_type):
             raise ConfirmationError
         
         iomanager = IOManager(
@@ -1088,22 +1091,12 @@ class TestIOManagerProcessTypecheck(IOManagerTest):
     def test_process_output(self):
         self.typecheck_test('output')
 
-class TestIOManagerPrecedence(IOManagerTest):
-    """ Confirm that 'input_coercion_functions' and 'output_coercion_functions'
-        each override 'coercion_functions'.
-        
-        Confirm that 'input_typecheck_functions' and
-        'output_typecheck_functions' each override 'typecheck_functions'. """
-    
+class IOManagerPrecedenceTest(IOManagerTest):
     def precedence_test(self, process_stage, process_kind):
         class ExpectedType(object):
             pass
         
-        def overridden_function(value):
-            pass
-        
-        def confirmed_function(value):
-            raise ConfirmationError
+        overridden_function, confirmed_function = self.make_functions()
         
         init_kwargs = {
             '{}_functions'.format(process_stage): {
@@ -1121,12 +1114,38 @@ class TestIOManagerPrecedence(IOManagerTest):
         
         with pytest.raises(ConfirmationError):
             self.process_test(iomanager, process_kind, tspec, iovals)
+
+class TestIOManagerPrecedenceCoercion(IOManagerPrecedenceTest):
+    """ Confirm that 'input_coercion_functions' and 'output_coercion_functions'
+        each override 'coercion_functions'. """
+    
+    def make_functions(self):
+        def overridden_function(value):
+            pass
+        
+        def confirmed_function(value):
+            raise ConfirmationError
+        
+        return overridden_function, confirmed_function
     
     def test_input_coercion_functions_overrides(self):
         self.precedence_test('coercion', 'input')
     
     def test_output_coercion_functions_overrides(self):
         self.precedence_test('coercion', 'output')
+
+class TestIOManagerPrecedenceTypecheck(IOManagerPrecedenceTest):
+    """ Confirm that 'input_typecheck_functions' and
+        'output_typecheck_functions' each override 'typecheck_functions'. """
+    
+    def make_functions(self):
+        def overridden_function(value, expected_type):
+            pass
+        
+        def confirmed_function(value, expected_type):
+            raise ConfirmationError
+        
+        return overridden_function, confirmed_function
     
     def test_input_typecheck_functions_overrides(self):
         self.precedence_test('typecheck', 'input')
