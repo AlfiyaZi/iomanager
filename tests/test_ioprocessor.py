@@ -16,9 +16,16 @@ from ioprocess.ioprocess import (
     TypeCheckFailureError,
     )
 
-pytestmark = pytest.mark.current
+pytestmark = pytest.mark.c
 
 _NotSet = object()
+
+class Error(Exception):
+    """ Base class for errors. """
+
+class ConfirmationError(Error):
+    """ Raised to confirm that a particular function or method has been
+        called. """
 
 # ---------------------- Dictionary keys checking ----------------------
 
@@ -974,6 +981,158 @@ class TestTypeCoercionCycle(unittest.TestCase):
     def test_uuid(self):
         uuid_value = uuid.uuid4()
         self.coercion_cycle_test(uuid.UUID, uuid_value)
+
+
+
+# -------------------------- IOManager tests ---------------------------
+
+@pytest.mark.a
+class IOManagerTest(unittest.TestCase):
+    """ Test the 'IOManager' class. """
+    def process_test(
+        self,
+        iomanager,
+        process_kind,
+        tspec,
+        iovals,
+        expected=None,
+        ):
+        method_name = 'process_' + process_kind
+        process_method = getattr(iomanager, method_name)
+        result == process_method(iovals, required=tspec)
+        assert result == expected
+
+class TestIOManagerProcessBasic(IOManagerTest):
+    def no_coercion_test(self, process_kind):
+        iomanager = IOManager()
+        
+        tspec = {'a': object}
+        expected = {'a': object()}
+        iovals = expected.copy()
+        
+        self.process_test(iomanager, process_kind, tspec, iovals, expected)
+    
+    def test_process_input(self):
+        self.no_coercion_test('input')
+    
+    def test_process_output(self):
+        self.no_coercion_test('output')
+
+class TestIOManagerProcessCoercion(IOManagerTest):
+    class ExternalType(object):
+        """ This type is used by an external process. Upon input, it must be
+            coerced to 'InternalType'. """
+    
+    class InternalType(object):
+        """ This type is used by an internal process. Upon output, it must be
+            coerced to 'ExternalType'. """
+    
+    def yes_coercion_test(
+        self,
+        process_kind,
+        coercion_function,
+        iovals,
+        expected
+        ):
+        iomanager = IOManager(
+            coercion_functions={InternalType: coercion_function}
+            )
+        
+        tspec = {'a': self.InternalType}
+        
+        self.process_test(iomanager, process_kind, tspec, iovals, expected)
+    
+    def test_process_input(self):
+        expected_value = InternalType()
+        
+        def coercion_function(value):
+            return expected_value
+        
+        iovals = {'a': ExternalType()}
+        expected = {'a': expected_value}
+        
+        self.yes_coercion_test('input', coercion_function, iovals, expected)
+    
+    def test_process_output(self):
+        expected_value = ExternalType()
+        
+        def coercion_function(value):
+            return expected_value
+        
+        iovals = {'a': InternalType()}
+        expected = {'a': expected_value}
+        
+        self.yes_coercion_test('output', coercion_function, iovals, expected)
+
+class TestIOManagerProcessTypecheck(IOManagerTest):
+    def typecheck_test(self, process_kind):
+        class ExpectedType(object):
+            pass
+        
+        def reject_all(value):
+            raise ConfirmationError
+        
+        iomanager = IOManager(
+            typecheck_functions={ExpectedType: reject_all}
+            )
+        
+        tspec = {'a': ExpectedType}
+        iovals = {'a': ExpectedType()}
+        
+        with pytest.raises(ConfirmationError):
+            self.process_test(iomanager, process_kind, tspec, iovals)
+    
+    def test_process_input(self):
+        self.typecheck_test('input')
+    
+    def test_process_output(self):
+        self.typecheck_test('output')
+
+class TestIOManagerPrecedence(IOManagerTest):
+    """ Confirm that 'input_coercion_functions' and 'output_coercion_functions'
+        each override 'coercion_functions'.
+        
+        Confirm that 'input_typecheck_functions' and
+        'output_typecheck_functions' each override 'typecheck_functions'. """
+    
+    def precedence_test(self, process_stage, process_kind):
+        class ExpectedType(object):
+            pass
+        
+        def overridden_function(value):
+            pass
+        
+        def confirmed_function(value):
+            raise ConfirmationError
+        
+        init_kwargs = {
+            '{}_functions'.format(process_stage): {
+                ExpectedType: overridden_function,
+                },
+            '{}_{}_functions'.format(process_kind, process_stage): {
+                ExpectedType: confirmed_function,
+                },
+            }
+        
+        iomanager = IOManager(**init_kwargs)
+        
+        tspec = {'a': ExpectedType}
+        iovals = {'a': ExpectedType()}
+        
+        with pytest.raises(ConfirmationError):
+            self.process_test(iomanager, process_kind, tspec, iovals)
+    
+    def test_input_coercion_functions_overrides(self):
+        self.precedence_test('coercion', 'input')
+    
+    def test_output_coercion_functions_overrides(self):
+        self.precedence_test('coercion', 'output')
+    
+    def test_input_typecheck_functions_overrides(self):
+        self.precedence_test('typecheck', 'input')
+    
+    def test_output_typecheck_functions_overrides(self):
+        self.precedence_test('typecheck', 'output')
 
 
 
