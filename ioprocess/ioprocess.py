@@ -230,7 +230,12 @@ class IOProcessor(object):
             unknown = {}
         
         # IMPLEMENT TYPE CHECKING HERE
-        wrong_types = {}
+        try:
+            self.verify_type(iovals_dict, combined_tspec)
+        except CoercionFailureResultError as exc:
+            wrong_types = exc.failure_result
+        else:
+            wrong_types = {}
         
         if not (missing or unknown or wrong_types):
             return
@@ -238,8 +243,8 @@ class IOProcessor(object):
         missing_output = make_missing_output(missing)
         
         err_msg_parts = [
-            intro_part + str(output_part)
-            for intro_part, output_part in
+            caption_part + str(output_part)
+            for caption_part, output_part in
             [
                 ('Missing: ', missing_output),
                 ('Not allowed: ', unknown),
@@ -251,6 +256,33 @@ class IOProcessor(object):
         err_msg = ('Invalid RPC arguments.\n' + '\n'.join(err_msg_parts))
         
         raise VerificationFailureError(err_msg)
+    
+    def verify_type(self, ioval, expected_type, nonetype_ok=True):
+        # Verify container types.
+        if isinstance(expected_type, dict):
+            self.coerce_dict(ioval, expected_type)
+            #self.verify_dict(ioval, expected_type)
+            return
+        
+        if isinstance(expected_type, ListOf):
+            self.verify_list(ioval, expected_type)
+            return
+        
+        # General case.
+        if (
+            isinstance(ioval, expected_type) or
+            (expected_type is AnyType) or
+            (ioval is None and nonetype_ok)
+            ):
+            return
+        
+        raise CoercionFailureResultError(expected_type, ioval)
+    
+    def verify_dict(self, iovals_dict, tspec, nonetype_ok=True):
+        pass
+    
+    def verify_list(self, iovals_list, listof):
+        pass
     
     def coerce(
         self,
