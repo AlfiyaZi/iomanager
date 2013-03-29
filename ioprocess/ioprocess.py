@@ -298,7 +298,17 @@ class IOProcessor(object):
             raise CoercionFailureResultDictError(wrong_types)
     
     def verify_list(self, iovals_list, listof):
-        pass
+        """ 'None' values are not permitted in lists.
+            
+            An attribute called 'lists_allow_none_values' is being considered
+            to allow modification of this behavior. """
+        if not isinstance(iovals_list, list):
+            raise CoercionFailureResultError(list, iovals_list)
+        
+        iovals_dict = make_dict_from_list(iovals_list)
+        tspec = listof.make_dict(len(iovals_list))
+        
+        self.verify_dict(iovals_dict, tspec, nonetype_ok=False)
     
     def coerce(
         self,
