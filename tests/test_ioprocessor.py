@@ -22,7 +22,7 @@ _NotSet = object()
 
 # ---------------------- Dictionary keys checking ----------------------
 
-class ProcessTest(unittest.TestCase):
+class VerificationTest(unittest.TestCase):
     class CustomType(object):
         pass
     
@@ -43,7 +43,7 @@ class ProcessTest(unittest.TestCase):
             unlimited=False,
             )
 
-class BasicTspecTest(ProcessTest):
+class BasicTspecTest(VerificationTest):
     @classmethod
     def required_iovals(cls):
         return dict(a=0, b=1, c=2)
@@ -143,7 +143,7 @@ class TestRequiredAndOptionalBoth(BasicTspecTest):
 
 # ------------------------- ListOf tspec tests -------------------------
 
-class TestListOf(ProcessTest):
+class TestListOf(VerificationTest):
     def trial_tspecs(self):
         return dict(
             required={
@@ -213,10 +213,10 @@ class ListOfStructuredTest(object):
         iovals['a'].append({'b': 1})
         self.bad_iovals_test(iovals)
 
-class TestListOfStructuredOptional(ListOfStructuredTest, ProcessTest):
+class TestListOfStructuredOptional(ListOfStructuredTest, VerificationTest):
     tspec_parameter_qualifier = 'optional'
 
-class TestListOfStructuredRequired(ListOfStructuredTest, ProcessTest):
+class TestListOfStructuredRequired(ListOfStructuredTest, VerificationTest):
     tspec_parameter_qualifier = 'required'
     
     def test_missing_key_passes(self):
@@ -258,10 +258,10 @@ class ListOfStructuredNestedTest(object):
         iovals['a'][0]['a']['x'] = 2
         self.bad_iovals_test(iovals)
 
-class TestListOfStructuredNestedOptional(ListOfStructuredNestedTest, ProcessTest):
+class TestListOfStructuredNestedOptional(ListOfStructuredNestedTest, VerificationTest):
     tspec_parameter_qualifier = 'optional'
 
-class TestListOfStructuredNestedRequired(ListOfStructuredNestedTest, ProcessTest):
+class TestListOfStructuredNestedRequired(ListOfStructuredNestedTest, VerificationTest):
     tspec_parameter_qualifier = 'required'
     
     def test_missing_nested_key_raises(self):
@@ -269,7 +269,7 @@ class TestListOfStructuredNestedRequired(ListOfStructuredNestedTest, ProcessTest
         del iovals['a'][0]['a']['b']
         self.bad_iovals_test(iovals)
 
-class TestListOfNestedListOf(ProcessTest):
+class TestListOfNestedListOf(VerificationTest):
     def trial_tspecs(self):
         return dict(
             required={
@@ -306,67 +306,61 @@ class TestListOfNestedListOf(ProcessTest):
 
 # ----------------------- Structured tspec tests -----------------------
 
-class StructuredTest(ProcessTest):
-    """ 'Structured' means that the tspec dictionary includes values that are
-        nested tspec dictionaries. """
+class StructuredDictTest(VerificationTest):
+    """ 'StructuredDict' here means that the tspec dictionary includes values
+        that are nested tspec dictionaries. """
     @classmethod
-    def structured_iovals(cls):
+    def make_iovals(cls):
         return {
-            'i': 0,
-            'j': 1,
             'a': {'b': 2, 'c': 3},
-            'w': {'x': 4, 'y': {'z': 5}},
             }
     
     @classmethod
-    def structured_tspec(cls):
+    def make_tspec(cls):
         return {
-            'i': int,
-            'j': int,
             'a': {'b': int, 'c': int},
-            'w': {'x': int, 'y': {'z': int}}
             }
     
     def none_value_raises_test(self):
-        iovals = self.structured_iovals()
+        iovals = self.make_iovals()
         iovals['a'] = None
         self.bad_iovals_test(iovals)
 
-class TestStructuredRequired(StructuredTest):
+class TestStructuredDictRequired(StructuredDictTest):
     def trial_tspecs(self):
         return dict(
-            required=self.structured_tspec()
+            required=self.make_tspec()
             )
     
     def test_ok_iovals(self):
-        self.good_iovals_test(self.structured_iovals())
+        self.good_iovals_test(self.make_iovals())
     
     def test_none_value_raises(self):
         self.none_value_raises_test()
     
     def test_missing_structured_ioval_raises(self):
-        iovals = self.structured_iovals()
+        iovals = self.make_iovals()
         del iovals['a']
         self.bad_iovals_test(iovals)
     
     def test_missing_nested_ioval_raises(self):
-        iovals = self.structured_iovals()
+        iovals = self.make_iovals()
         del iovals['a']['b']
         self.bad_iovals_test(iovals)
     
     def test_extra_nested_ioval_raises(self):
-        iovals = self.structured_iovals()
+        iovals = self.make_iovals()
         iovals['a']['xxx'] = 9
         self.bad_iovals_test(iovals)
 
-class TestStructuredOptional(StructuredTest):
+class TestStructuredDictOptional(StructuredDictTest):
     def trial_tspecs(self):
         return dict(
-            optional=self.structured_tspec()
+            optional=self.make_tspec()
             )
     
     def test_ok_iovals(self):
-        self.good_iovals_test(self.structured_iovals())
+        self.good_iovals_test(self.make_iovals())
     
     def test_none_value_raises(self):
         self.none_value_raises_test()
@@ -375,21 +369,21 @@ class TestStructuredOptional(StructuredTest):
         self.good_iovals_test(iovals={})
     
     def test_missing_structured_ioval_passes(self):
-        iovals = self.structured_iovals()
+        iovals = self.make_iovals()
         del iovals['a']
         self.good_iovals_test(iovals)
     
     def test_missing_nested_ioval_passes(self):
-        iovals = self.structured_iovals()
+        iovals = self.make_iovals()
         del iovals['a']['b']
         self.good_iovals_test(iovals)
     
     def test_extra_nested_ioval_raises(self):
-        iovals = self.structured_iovals()
+        iovals = self.make_iovals()
         iovals['a']['xxx'] = 9
         self.bad_iovals_test(iovals)
 
-class TestStructuredRequiredEmpty(ProcessTest):
+class TestStructuredDictRequiredEmpty(VerificationTest):
     def trial_tspecs(self):
         return dict(
             required={'a': {}}
@@ -404,7 +398,7 @@ class TestStructuredRequiredEmpty(ProcessTest):
     def test_extra_nested_ioval_raises(self):
         self.bad_iovals_test({'a': {'x': 1}})
 
-class TestStructuredOptionalEmpty(ProcessTest):
+class TestStructuredDictOptionalEmpty(VerificationTest):
     def trial_tspecs(self):
         return dict(
             optional={'a': {}}
@@ -419,9 +413,9 @@ class TestStructuredOptionalEmpty(ProcessTest):
     def test_extra_nested_ioval_raises(self):
         self.bad_iovals_test({'a': {'x': 1}})
 
-class TestStructuredUnlimited(ProcessTest):
+class TestStructuredDictUnlimited(VerificationTest):
     """ When 'unlimited' is True, only top-level keyword arguments are
-        unlimited. Structured data should still be checked for unknown keyword
+        unlimited. StructuredDict data should still be checked for unknown keyword
         arguments. """
     
     def trial_tspecs(self):
@@ -436,7 +430,7 @@ class TestStructuredUnlimited(ProcessTest):
     def test_extra_nested_kwarg_raises(self):
         self.bad_iovals_test({'a': {'x': 1}})
 
-class TestStructuredRequiredOverridesOptional(ProcessTest):
+class TestStructuredDictRequiredOverridesOptional(VerificationTest):
     """ When structured tspec keys appear in both the 'required' and the
         'optional' tspecs, the 'required' condition should take precedence. """
     @classmethod
@@ -523,9 +517,14 @@ class TestStructuredRequiredOverridesOptional(ProcessTest):
 
 
 
+# ----------------------- Structured-list tests ------------------------
+
+# Structured lists are a planned future feature.
+
+
+
 # ------------------------ Type checking tests -------------------------
 
-@pytest.mark.typecheck
 class TypeCheckingTest(unittest.TestCase):
     """ Confirm that coercion behaves correctly when the tspec 'type object' is
         a 'class' object. """
@@ -677,8 +676,7 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
             raise TypeCheckSuccessError
         self.process_passes_test(self.InvalidType(), accept_value)
 
-@pytest.mark.xfail
-@pytest.mark.typecheck
+@pytest.mark.a
 class TestTypeCheckingDefaultFunctions(unittest.TestCase):   
     """ Confirm that default type checking functions behave as expected. """ 
     def default_function_passes_test(self, value, expected_type):
@@ -729,7 +727,6 @@ def retrieve_location(location_tuple, container):
     
     return retrieve_location(remainder, target_value)
 
-@pytest.mark.coercion
 class TypeCoercionTest(unittest.TestCase):
     def get_coercion_result(self, tspecs=None, iovals=None):
         coercion_functions = self.get_coercion_functions()
@@ -757,7 +754,7 @@ class TypeCoercionTest(unittest.TestCase):
         result_value = self.get_result_value(location, **kwargs)
         assert result_value == expected_value
 
-class TypeCoercionProcessTest(TypeCoercionTest):
+class TypeCoercionVerificationTest(TypeCoercionTest):
     """ A test to confirm that calling IOProcessor.coerce() uses the coercion
         functions (provided by the 'coercion_functions' argument) correctly. """
     
@@ -782,7 +779,7 @@ class TypeCoercionProcessTest(TypeCoercionTest):
             self.YesCoercionType: self.coerce_yescoerciontype,
         }
 
-class TestTypeCoercionArguments(TypeCoercionProcessTest):
+class TestTypeCoercionArguments(TypeCoercionVerificationTest):
     """ Confirm coercion for each of 'required', 'optional', and
         'unlimited' arguments. """
     
@@ -812,7 +809,7 @@ class TestTypeCoercionArguments(TypeCoercionProcessTest):
     def test_coercion_optional(self):
         self.coercion_argument_test('optional')
 
-class TestTypeCoercionRequiredOverridesOptional(TypeCoercionProcessTest):
+class TestTypeCoercionRequiredOverridesOptional(TypeCoercionVerificationTest):
     """ Confirm that when 'required' and 'optional' are both
         present, 'required' overrides 'optional. """
     
@@ -859,7 +856,6 @@ class TestTypeCoercionOther(TypeCoercionTest):
         type_obj = ioprocess.ListOf(unicode)
         self.coercion_test(type_obj, trial_list, expected)
 
-@pytest.mark.coercion
 class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
     """ Confirm that the default type coercion functions behave as expected. """
     class ArbitraryType(object):
@@ -974,8 +970,6 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
             expected=uuid_string,
             )
 
-@pytest.mark.xfail
-@pytest.mark.coercion
 class TestTypeCoercionCycle(unittest.TestCase):
     """ Confirm that certain types are preserved through the coercion 'cycle'.
         

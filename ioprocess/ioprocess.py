@@ -83,7 +83,7 @@ class NotProvided(object):
 class NoDifference(object):
     """ Return value when a 'difference' function returns no difference.
         
-        This is necessary so that 'difference_item', 'difference_dict' and
+        This is necessary so that 'difference_ioval', 'difference_dict' and
         'difference_list' can all return the same value. """
 
 class UnknownDict(object):
@@ -197,10 +197,9 @@ class IOProcessor(object):
         
         combined_tspec = combine_tspecs(required_tspec, optional_tspec)
         
-        missing = difference_dict(
+        missing = self.difference_dict(
             required_tspec,
             iovals_dict,
-            comparison='missing',
             )
         if missing is NoDifference:
             missing = {}
@@ -221,17 +220,16 @@ class IOProcessor(object):
         else:
             possibly_unknown_iovals = iovals_dict
         
-        unknown = difference_dict(
+        unknown = self.difference_dict(
             possibly_unknown_iovals,
             combined_tspec,
-            comparison='unknown',
+            result_modifier=modify_unknown_result
             )
         if unknown is NoDifference:
             unknown = {}
         
-        # IMPLEMENT TYPE CHECKING HERE
         try:
-            self.verify_type(iovals_dict, combined_tspec)
+            self.confirm_type_dict(iovals_dict, combined_tspec)
         except WrongTypeError as exc:
             wrong_types = exc.failure_result
         else:
@@ -256,15 +254,58 @@ class IOProcessor(object):
         err_msg = ('Invalid RPC arguments.\n' + '\n'.join(err_msg_parts))
         
         raise VerificationFailureError(err_msg)
+
+    def difference_ioval(self, item_a, item_b=NotProvided, result_modifier=None):
+        if all_are_instances((item_a, item_b), dict):
+            return self.difference_dict(item_a, item_b, result_modifier)
+        
+        if all_are_instances((item_a, item_b), (list, ListOf)):
+            return self.difference_list(item_a, item_b, result_modifier)
+        
+        # 'item_a' is a type object or a builtin instance.
+        
+        if item_b is NotProvided:
+            if result_modifier:
+                return result_modifier(item_a)
+            
+            return item_a
+        
+        return NoDifference
     
-    def verify_type(self, ioval, expected_type, nonetype_ok=True):
+    def difference_dict(self, dict_a, dict_b, *pargs, **kwargs):
+        result = {}
+        
+        for ikey, item_a in dict_a.items():
+            item_b = dict_b.get(ikey, NotProvided)
+            item_result = (
+                self.difference_ioval(item_a, item_b, *pargs, **kwargs)
+                )
+            if item_result is not NoDifference:
+                result[ikey] = item_result
+        
+        if result:
+            return result
+        
+        return NoDifference
+    
+    def difference_list(self, list_obj_a, list_obj_b, *pargs, **kwargs):
+        if isinstance(list_obj_a, list):
+            dict_a = make_dict_from_list(list_obj_a)
+            dict_b = list_obj_b.make_dict(len(list_obj_a))
+        else:
+            dict_a = list_obj_a.make_dict(len(list_obj_b))
+            dict_b = make_dict_from_list(list_obj_b)
+        
+        return self.difference_dict(dict_a, dict_b, *pargs, **kwargs)
+    
+    def confirm_type_ioval(self, ioval, expected_type, nonetype_ok=True):
         # Verify container types.
         if isinstance(expected_type, dict):
-            self.verify_dict(ioval, expected_type)
+            self.confirm_type_dict(ioval, expected_type)
             return
         
         if isinstance(expected_type, ListOf):
-            self.verify_list(ioval, expected_type)
+            self.confirm_type_list(ioval, expected_type)
             return
         
         # General case.
@@ -277,7 +318,7 @@ class IOProcessor(object):
         
         raise WrongTypeError(expected_type, ioval)
     
-    def verify_dict(self, iovals_dict, tspec, nonetype_ok=True):
+    def confirm_type_dict(self, iovals_dict, tspec, nonetype_ok=True):
         if not isinstance(iovals_dict, dict):
             raise WrongTypeError(dict, iovals_dict)
         
@@ -290,14 +331,14 @@ class IOProcessor(object):
             expected_type = tspec[key]
             
             try:
-                self.verify_type(ioval, expected_type, nonetype_ok)
+                self.confirm_type_ioval(ioval, expected_type, nonetype_ok)
             except WrongTypeError as exc:
                 wrong_types[key] = exc.failure_result
         
         if wrong_types:
             raise WrongTypeDictError(wrong_types)
     
-    def verify_list(self, iovals_list, listof):
+    def confirm_type_list(self, iovals_list, listof):
         """ 'None' values are not permitted in lists.
             
             An attribute called 'lists_allow_none_values' is being considered
@@ -308,7 +349,7 @@ class IOProcessor(object):
         iovals_dict = make_dict_from_list(iovals_list)
         tspec = listof.make_dict(len(iovals_list))
         
-        self.verify_dict(iovals_dict, tspec, nonetype_ok=False)
+        self.confirm_type_dict(iovals_dict, tspec, nonetype_ok=False)
     
     def coerce(
         self,
@@ -320,6 +361,7 @@ class IOProcessor(object):
         required_tspec = required.copy()
         optional_tspec = optional.copy()
         combined_tspec = combine_tspecs(required_tspec, optional_tspec)
+        
         return self.coerce_dict(iovals_dict, combined_tspec)
     
     def coerce_ioval(self, ioval, expected_type, nonetype_ok=True):
@@ -331,62 +373,34 @@ class IOProcessor(object):
             return self.coerce_list(ioval, expected_type)
         
         # Coerce non-container types.
-        if expected_type in self.coercion_functions:
+        try:
             coercion_function = self.coercion_functions[expected_type]
-            result = coercion_function(ioval)
-        else:
+        except KeyError:
             result = ioval
+        else:
+            result = coercion_function(ioval)
         
-        # General case.
-        if (
-            isinstance(result, expected_type) or
-            (expected_type is AnyType) or
-            (result is None and nonetype_ok)
-            ):
-            return result
-        
-        raise WrongTypeError(expected_type, ioval)
+        return result
     
     def coerce_dict(self, iovals_dict, tspec, nonetype_ok=True):
-        if not isinstance(iovals_dict, dict):
-            raise WrongTypeError(dict, iovals_dict)
-        
         result_iovals = {}
-        failure_dict = {}
         
-        for key, arg_value in iovals_dict.items():
-            if key not in tspec:
-                result_iovals[key] = arg_value
+        for key, ioval in iovals_dict.items():
+            try:
+                expected_type = tspec[key]
+            except KeyError:
+                result_iovals[key] = ioval
                 continue
             
-            expected_type = tspec[key]
-            
-            try:
-                result_iovals[key] = self.coerce_ioval(
-                    arg_value,
-                    expected_type,
-                    nonetype_ok,
-                    )
-            except WrongTypeError as exc:
-                failure_dict[key] = exc.failure_result
-        
-        if failure_dict:
-            raise WrongTypeDictError(failure_dict)
+            result_iovals[key] = self.coerce_ioval(ioval, expected_type)
         
         return result_iovals
     
-    def coerce_list(self, arg_list, listof):
-        if not isinstance(arg_list, list):
-            raise WrongTypeError(list, arg_list)
+    def coerce_list(self, iovals_list, listof):
+        iovals_dict = make_dict_from_list(iovals_list)
+        tspec = listof.make_dict(len(iovals_list))
         
-        iovals_dict = make_dict_from_list(arg_list)
-        tspec = listof.make_dict(len(arg_list))
-        
-        result_dict = self.coerce_dict(
-            iovals_dict,
-            tspec,
-            nonetype_ok=False,
-            )
+        result_dict = self.coerce_dict(iovals_dict, tspec)
         
         result_list = [
             result_dict[ikey] for ikey in sorted(result_dict.keys())
@@ -403,6 +417,14 @@ def output_processor():
 
 
 # ----------------------------- Functions ------------------------------
+
+def modify_unknown_result(ioval):
+    if isinstance(ioval, dict):
+        return UnknownDict()
+    if isinstance(ioval, list):
+        return UnknownList()
+    
+    return ioval
 
 def tspecs_from_callable(callable_obj):
     argspec = inspect.getargspec(callable_obj)
@@ -430,53 +452,15 @@ def tspecs_from_callable(callable_obj):
 def make_dict_from_list(list_obj):
     return dict(zip(range(len(list_obj)), list_obj))
 
-def difference_item(item_a, item_b=NotProvided, comparison=None):
-    if comparison is None:
-        raise TypeError("'comparison' is a required parameter.")
+def all_are_instances(items, type_objs):
+    if not isinstance(type_objs, tuple):
+        type_objs = (type_objs, )
     
-    if isinstance(item_a, dict):
-        if isinstance(item_b, dict):
-            return difference_dict(item_a, item_b, comparison)
-        if comparison == 'unknown':
-            if item_b is NotProvided:
-                return UnknownDict()
-    elif isinstance(item_a, (list, ListOf)):
-        if isinstance(item_b, (list, ListOf)):
-            return difference_list(item_a, item_b, comparison)
-        if comparison == 'unknown':
-            if item_b is NotProvided:
-                return UnknownList()
+    for item in items:
+        if not isinstance(item, type_objs):
+            return False
     
-    # 'item_a' is a type object or a builtin instance.
-    
-    if item_b is NotProvided:
-        return item_a
-    
-    return NoDifference
-
-def difference_list(list_obj_a, list_obj_b, comparison):
-    if isinstance(list_obj_a, list):
-        dict_a = make_dict_from_list(list_obj_a)
-        dict_b = list_obj_b.make_dict(len(list_obj_a))
-    else:
-        dict_a = list_obj_a.make_dict(len(list_obj_b))
-        dict_b = make_dict_from_list(list_obj_b)
-    
-    return difference_dict(dict_a, dict_b, comparison)
-
-def difference_dict(dict_a, dict_b, comparison):
-    result = {}
-    
-    for ikey, item_a in dict_a.items():
-        item_b = dict_b.get(ikey, NotProvided)
-        item_result = difference_item(item_a, item_b, comparison)
-        if item_result is not NoDifference:
-            result[ikey] = item_result
-    
-    if result:
-        return result
-    
-    return NoDifference
+    return True
 
 def combine_tspecs(tspec_a, tspec_b):
     result = {}
