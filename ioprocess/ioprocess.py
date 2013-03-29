@@ -20,7 +20,7 @@ class VerificationFailureError(Error):
     """ The 'iovals_dict' value submitted for processing did not conform to the
         provided 'tspec' values. """
 
-class CoercionFailureResultError(Error):
+class WrongTypeError(Error):
     """ An 'ioval' value could not be coerced to the expected type.
         
         This error is used to pass a 'failure result', which is an instance of
@@ -29,7 +29,7 @@ class CoercionFailureResultError(Error):
     def __init__(self, *pargs, **kwargs):
         self.failure_result = WrongTypePair(*pargs, **kwargs)
 
-class CoercionFailureResultDictError(CoercionFailureResultError):
+class WrongTypeDictError(WrongTypeError):
     """ Values in a dict or list of arguments could not be coerced to the
         expected type.
         
@@ -232,7 +232,7 @@ class IOProcessor(object):
         # IMPLEMENT TYPE CHECKING HERE
         try:
             self.verify_type(iovals_dict, combined_tspec)
-        except CoercionFailureResultError as exc:
+        except WrongTypeError as exc:
             wrong_types = exc.failure_result
         else:
             wrong_types = {}
@@ -275,11 +275,11 @@ class IOProcessor(object):
             ):
             return
         
-        raise CoercionFailureResultError(expected_type, ioval)
+        raise WrongTypeError(expected_type, ioval)
     
     def verify_dict(self, iovals_dict, tspec, nonetype_ok=True):
         if not isinstance(iovals_dict, dict):
-            raise CoercionFailureResultError(dict, iovals_dict)
+            raise WrongTypeError(dict, iovals_dict)
         
         wrong_types = {}
         
@@ -291,11 +291,11 @@ class IOProcessor(object):
             
             try:
                 self.verify_type(ioval, expected_type, nonetype_ok)
-            except CoercionFailureResultError as exc:
+            except WrongTypeError as exc:
                 wrong_types[key] = exc.failure_result
         
         if wrong_types:
-            raise CoercionFailureResultDictError(wrong_types)
+            raise WrongTypeDictError(wrong_types)
     
     def verify_list(self, iovals_list, listof):
         """ 'None' values are not permitted in lists.
@@ -303,7 +303,7 @@ class IOProcessor(object):
             An attribute called 'lists_allow_none_values' is being considered
             to allow modification of this behavior. """
         if not isinstance(iovals_list, list):
-            raise CoercionFailureResultError(list, iovals_list)
+            raise WrongTypeError(list, iovals_list)
         
         iovals_dict = make_dict_from_list(iovals_list)
         tspec = listof.make_dict(len(iovals_list))
@@ -345,11 +345,11 @@ class IOProcessor(object):
             ):
             return result
         
-        raise CoercionFailureResultError(expected_type, ioval)
+        raise WrongTypeError(expected_type, ioval)
     
     def coerce_dict(self, iovals_dict, tspec, nonetype_ok=True):
         if not isinstance(iovals_dict, dict):
-            raise CoercionFailureResultError(dict, iovals_dict)
+            raise WrongTypeError(dict, iovals_dict)
         
         result_iovals = {}
         failure_dict = {}
@@ -367,17 +367,17 @@ class IOProcessor(object):
                     expected_type,
                     nonetype_ok,
                     )
-            except CoercionFailureResultError as exc:
+            except WrongTypeError as exc:
                 failure_dict[key] = exc.failure_result
         
         if failure_dict:
-            raise CoercionFailureResultDictError(failure_dict)
+            raise WrongTypeDictError(failure_dict)
         
         return result_iovals
     
     def coerce_list(self, arg_list, listof):
         if not isinstance(arg_list, list):
-            raise CoercionFailureResultError(list, arg_list)
+            raise WrongTypeError(list, arg_list)
         
         iovals_dict = make_dict_from_list(arg_list)
         tspec = listof.make_dict(len(arg_list))
