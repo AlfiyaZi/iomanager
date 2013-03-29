@@ -3,15 +3,15 @@ import unittest
 from ioprocess import (
     IOProcessor,
     AnyType,
-    tspecs_from_callable,
-    combine_tspecs,
+    iospecs_from_callable,
+    combine_iospecs,
     )
 
 class ResultTest(object):
     """ Confirm that the result dictionary is compatible with the
         'IOProcessor.verify' method parameters. """
     def test_result(self):
-        result = tspecs_from_callable(self.callable)
+        result = iospecs_from_callable(self.callable)
         
         # Construct dummy iovals. For each key in 'required', 'optional', set
         # that key value to 'None' in the dummy ioval.
@@ -23,10 +23,10 @@ class ResultTest(object):
         IOProcessor().verify(iovals, **result)
 
 class TspecValueTest(unittest.TestCase):
-    def tspec_value_test(self, tspec_name, expected_list):
-        result = tspecs_from_callable(self.callable)
+    def iospec_value_test(self, iospec_name, expected_list):
+        result = iospecs_from_callable(self.callable)
         expected = {ikey: AnyType for ikey in expected_list}
-        assert result[tspec_name] == expected
+        assert result[iospec_name] == expected
     
 
 class TestParametersEmpty(TspecValueTest, ResultTest):
@@ -36,11 +36,11 @@ class TestParametersEmpty(TspecValueTest, ResultTest):
             pass
         return callable_obj
     
-    def test_required_tspec(self):
-        self.tspec_value_test('required', [])
+    def test_required_iospec(self):
+        self.iospec_value_test('required', [])
     
-    def test_optional_tspec(self):
-        self.tspec_value_test('optional', [])
+    def test_optional_iospec(self):
+        self.iospec_value_test('optional', [])
 
 class TestParametersRequired(TspecValueTest, ResultTest):
     @property
@@ -49,11 +49,11 @@ class TestParametersRequired(TspecValueTest, ResultTest):
             pass
         return callable_obj
     
-    def test_required_tspec(self):
-        self.tspec_value_test('required', ['a'])
+    def test_required_iospec(self):
+        self.iospec_value_test('required', ['a'])
     
-    def test_optional_tspec(self):
-        self.tspec_value_test('optional', [])
+    def test_optional_iospec(self):
+        self.iospec_value_test('optional', [])
 
 class TestParametersOptional(TspecValueTest, ResultTest):
     @property
@@ -62,11 +62,11 @@ class TestParametersOptional(TspecValueTest, ResultTest):
             pass
         return callable_obj
     
-    def test_required_tspec(self):
-        self.tspec_value_test('required', [])
+    def test_required_iospec(self):
+        self.iospec_value_test('required', [])
     
-    def test_optional_tspec(self):
-        self.tspec_value_test('optional', ['b'])
+    def test_optional_iospec(self):
+        self.iospec_value_test('optional', ['b'])
 
 class TestParametersBothRequiredAndOptional(TspecValueTest, ResultTest):
     @property
@@ -75,11 +75,11 @@ class TestParametersBothRequiredAndOptional(TspecValueTest, ResultTest):
             pass
         return callable_obj
     
-    def test_required_tspec(self):
-        self.tspec_value_test('required', ['a'])
+    def test_required_iospec(self):
+        self.iospec_value_test('required', ['a'])
     
-    def test_optional_tspec(self):
-        self.tspec_value_test('optional', ['b'])
+    def test_optional_iospec(self):
+        self.iospec_value_test('optional', ['b'])
 
 
 

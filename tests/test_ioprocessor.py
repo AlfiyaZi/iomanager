@@ -19,8 +19,6 @@ from ioprocess.ioprocess import (
     TypeCheckFailureError,
     )
 
-pytestmark = pytest.mark.c
-
 _NotSet = object()
 
 class Error(Exception):
@@ -40,13 +38,13 @@ class VerificationTest(unittest.TestCase):
         pass
     
     def good_iovals_test(self, iovals):
-        IOProcessor().verify(iovals, **self.trial_tspecs())
+        IOProcessor().verify(iovals, **self.trial_iospecs())
     
     def bad_iovals_test(self, iovals):
         with pytest.raises(VerificationFailureError):
             self.good_iovals_test(iovals)
     
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
             optional={},
             required={},
@@ -63,11 +61,11 @@ class BasicTspecTest(VerificationTest):
         return dict(d=3, e=4, f=5)
     
     @classmethod
-    def required_tspec(cls):
+    def required_iospec(cls):
         return {'a': int, 'b': int, 'c': int}
     
     @classmethod
-    def optional_tspec(cls):
+    def optional_iospec(cls):
         return {'d': int, 'e': int, 'f': int}
     
     @classmethod
@@ -77,9 +75,9 @@ class BasicTspecTest(VerificationTest):
         return result
 
 class TestRequiredTspec(BasicTspecTest):
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
-            required=self.required_tspec()
+            required=self.required_iospec()
             )
     
     def test_good_iovals(self):
@@ -96,8 +94,8 @@ class TestRequiredTspec(BasicTspecTest):
         self.bad_iovals_test(iovals)
 
 class TestOptionalTspec(BasicTspecTest):
-    def trial_tspecs(self):
-        return dict(optional=self.optional_tspec())
+    def trial_iospecs(self):
+        return dict(optional=self.optional_iospec())
     
     def test_good_iovals(self):
         self.good_iovals_test(self.optional_iovals())
@@ -113,7 +111,7 @@ class TestOptionalTspec(BasicTspecTest):
         self.bad_iovals_test(iovals)
 
 class TestUnlimitedIOVals(BasicTspecTest):
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(unlimited=True)
     
     def test_empty_iovals_passes(self):
@@ -125,10 +123,10 @@ class TestUnlimitedIOVals(BasicTspecTest):
         self.good_iovals_test(iovals)
 
 class TestRequiredAndOptionalBoth(BasicTspecTest):
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
-            required=self.required_tspec(),
-            optional=self.optional_tspec(),
+            required=self.required_iospec(),
+            optional=self.optional_iospec(),
             )
     
     def test_all_iovals_pass(self):
@@ -151,10 +149,10 @@ class TestRequiredAndOptionalBoth(BasicTspecTest):
 
 
 
-# ------------------------- ListOf tspec tests -------------------------
+# ------------------------- ListOf iospec tests -------------------------
 
 class TestListOf(VerificationTest):
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
             required={
                 'a': ioprocess.ListOf(int)
@@ -183,16 +181,16 @@ class TestListOf(VerificationTest):
         self.bad_iovals_test({'a': [0, 1, 'a']})
 
 class ListOfStructuredTest(object):
-    def listof_tspec(self):
+    def listof_iospec(self):
         return {
             'a': ioprocess.ListOf(
                     {'a': int,}
                 )
             }
     
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return {
-            self.tspec_parameter_qualifier: self.listof_tspec()
+            self.iospec_parameter_qualifier: self.listof_iospec()
         }
     
     def good_item(self, n=0):
@@ -224,10 +222,10 @@ class ListOfStructuredTest(object):
         self.bad_iovals_test(iovals)
 
 class TestListOfStructuredOptional(ListOfStructuredTest, VerificationTest):
-    tspec_parameter_qualifier = 'optional'
+    iospec_parameter_qualifier = 'optional'
 
 class TestListOfStructuredRequired(ListOfStructuredTest, VerificationTest):
-    tspec_parameter_qualifier = 'required'
+    iospec_parameter_qualifier = 'required'
     
     def test_missing_key_passes(self):
         iovals = self.good_iovals()
@@ -235,7 +233,7 @@ class TestListOfStructuredRequired(ListOfStructuredTest, VerificationTest):
         self.bad_iovals_test(iovals)
 
 class ListOfStructuredNestedTest(object):
-    def listof_tspec(self):
+    def listof_iospec(self):
         return {
             'a':  ioprocess.ListOf(
                 {
@@ -246,9 +244,9 @@ class ListOfStructuredNestedTest(object):
             )
         }
     
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return {
-            self.tspec_parameter_qualifier: self.listof_tspec()
+            self.iospec_parameter_qualifier: self.listof_iospec()
         }
     
     def good_item(self, n=0):
@@ -269,10 +267,10 @@ class ListOfStructuredNestedTest(object):
         self.bad_iovals_test(iovals)
 
 class TestListOfStructuredNestedOptional(ListOfStructuredNestedTest, VerificationTest):
-    tspec_parameter_qualifier = 'optional'
+    iospec_parameter_qualifier = 'optional'
 
 class TestListOfStructuredNestedRequired(ListOfStructuredNestedTest, VerificationTest):
-    tspec_parameter_qualifier = 'required'
+    iospec_parameter_qualifier = 'required'
     
     def test_missing_nested_key_raises(self):
         iovals = self.good_iovals()
@@ -280,7 +278,7 @@ class TestListOfStructuredNestedRequired(ListOfStructuredNestedTest, Verificatio
         self.bad_iovals_test(iovals)
 
 class TestListOfNestedListOf(VerificationTest):
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
             required={
                 'a': ioprocess.ListOf(
@@ -314,11 +312,11 @@ class TestListOfNestedListOf(VerificationTest):
 
 
 
-# ----------------------- Structured tspec tests -----------------------
+# ----------------------- Structured iospec tests -----------------------
 
 class StructuredDictTest(VerificationTest):
-    """ 'StructuredDict' here means that the tspec dictionary includes values
-        that are nested tspec dictionaries. """
+    """ 'StructuredDict' here means that the iospec dictionary includes values
+        that are nested iospec dictionaries. """
     @classmethod
     def make_iovals(cls):
         return {
@@ -326,7 +324,7 @@ class StructuredDictTest(VerificationTest):
             }
     
     @classmethod
-    def make_tspec(cls):
+    def make_iospec(cls):
         return {
             'a': {'b': int, 'c': int},
             }
@@ -337,9 +335,9 @@ class StructuredDictTest(VerificationTest):
         self.bad_iovals_test(iovals)
 
 class TestStructuredDictRequired(StructuredDictTest):
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
-            required=self.make_tspec()
+            required=self.make_iospec()
             )
     
     def test_ok_iovals(self):
@@ -364,9 +362,9 @@ class TestStructuredDictRequired(StructuredDictTest):
         self.bad_iovals_test(iovals)
 
 class TestStructuredDictOptional(StructuredDictTest):
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
-            optional=self.make_tspec()
+            optional=self.make_iospec()
             )
     
     def test_ok_iovals(self):
@@ -394,7 +392,7 @@ class TestStructuredDictOptional(StructuredDictTest):
         self.bad_iovals_test(iovals)
 
 class TestStructuredDictRequiredEmpty(VerificationTest):
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
             required={'a': {}}
             )
@@ -409,7 +407,7 @@ class TestStructuredDictRequiredEmpty(VerificationTest):
         self.bad_iovals_test({'a': {'x': 1}})
 
 class TestStructuredDictOptionalEmpty(VerificationTest):
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
             optional={'a': {}}
             )
@@ -428,7 +426,7 @@ class TestStructuredDictUnlimited(VerificationTest):
         unlimited. StructuredDict data should still be checked for unknown keyword
         arguments. """
     
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
             optional={'a': {'b': int}},
             unlimited=True
@@ -441,10 +439,10 @@ class TestStructuredDictUnlimited(VerificationTest):
         self.bad_iovals_test({'a': {'x': 1}})
 
 class TestStructuredDictRequiredOverridesOptional(VerificationTest):
-    """ When structured tspec keys appear in both the 'required' and the
-        'optional' tspecs, the 'required' condition should take precedence. """
+    """ When structured iospec keys appear in both the 'required' and the
+        'optional' iospecs, the 'required' condition should take precedence. """
     @classmethod
-    def required_tspec(cls):
+    def required_iospec(cls):
         return {
             'a': int,
             'b': {'x': int, 'y': int},
@@ -455,7 +453,7 @@ class TestStructuredDictRequiredOverridesOptional(VerificationTest):
             }
     
     @classmethod
-    def optional_tspec(cls):
+    def optional_iospec(cls):
         return {
             'a': int,
             'b': {'y': int, 'z': int},
@@ -476,10 +474,10 @@ class TestStructuredDictRequiredOverridesOptional(VerificationTest):
                 ),
             )
     
-    def trial_tspecs(self):
+    def trial_iospecs(self):
         return dict(
-            required=self.required_tspec(),
-            optional=self.optional_tspec(),
+            required=self.required_iospec(),
+            optional=self.optional_iospec(),
             )
     
     def test_all_iovals_passes(self):
@@ -536,7 +534,7 @@ class TestStructuredDictRequiredOverridesOptional(VerificationTest):
 # ------------------------ Type checking tests -------------------------
 
 class TypeCheckingTest(unittest.TestCase):
-    """ Confirm that coercion behaves correctly when the tspec 'type object' is
+    """ Confirm that coercion behaves correctly when the iospec 'type object' is
         a 'class' object. """
     
     class CustomType(object):
@@ -552,7 +550,7 @@ class TestTypeCheckingBasic(TypeCheckingTest):
     def get_process_result(
         self,
         value,
-        tspec_kind='required',
+        iospec_kind='required',
         expected_type=None
         ):
         if expected_type is None:
@@ -561,7 +559,7 @@ class TestTypeCheckingBasic(TypeCheckingTest):
         ioprocessor = IOProcessor()
         ioprocessor.verify(
             iovals={'a': value},
-            **{tspec_kind: {'a': expected_type}}
+            **{iospec_kind: {'a': expected_type}}
             )
     
     def process_passes_test(self, *pargs, **kwargs):
@@ -611,7 +609,7 @@ class TypeCheckingExtendedTest(object):
             }
         
         required = {
-            'a': self.make_extended_tspec()
+            'a': self.make_extended_iospec()
             }
         
         ioprocessor.verify(
@@ -627,23 +625,23 @@ class TypeCheckingExtendedTest(object):
             self.call_process_method(self.InvalidType())
 
 class TestTypeCheckingStructured(TypeCheckingTest, TypeCheckingExtendedTest):
-    """ Confirm that type checking is occurring when the tspec 'type object' is
+    """ Confirm that type checking is occurring when the iospec 'type object' is
         a dictionary. """
     
     def make_extended_ioval(self, value):
         return {'b': value}
     
-    def make_extended_tspec(self):
+    def make_extended_iospec(self):
         return {'b': self.CustomType}
 
 class TestTypeCheckingListOf(TypeCheckingTest, TypeCheckingExtendedTest):
-    """ Confirm that type checking is occurring when the tspec 'type object' is
+    """ Confirm that type checking is occurring when the iospec 'type object' is
         a ListOf instance. """
     
     def make_extended_ioval(self, value):
         return [value]
     
-    def make_extended_tspec(self):
+    def make_extended_iospec(self):
         return ioprocess.ListOf(self.CustomType)
 
 class TestTypeCheckingCustomFunction(TypeCheckingTest):
@@ -696,7 +694,7 @@ def retrieve_location(location_tuple, container):
     remainder = location_tuple[1:]
     
     if isinstance(container, ioprocess.ListOf):
-        target_value = container.tspec_obj
+        target_value = container.iospec_obj
     else:
         target_value = container[this_index]
     
@@ -706,16 +704,16 @@ def retrieve_location(location_tuple, container):
     return retrieve_location(remainder, target_value)
 
 class TypeCoercionTest(unittest.TestCase):
-    def get_coercion_result(self, tspecs=None, iovals=None):
+    def get_coercion_result(self, iospecs=None, iovals=None):
         coercion_functions = self.get_coercion_functions()
         ioprocessor = IOProcessor(
             coercion_functions=self.get_coercion_functions()
             )
         
-        tspecs = tspecs or self.get_tspecs()
+        iospecs = iospecs or self.get_iospecs()
         iovals = iovals or self.get_iovals()
         
-        return ioprocessor.coerce(iovals, **tspecs)
+        return ioprocessor.coerce(iovals, **iospecs)
     
     def get_result_value(self, location, **kwargs):
         result_dict = self.get_coercion_result(**kwargs)
@@ -764,22 +762,22 @@ class TestTypeCoercionArguments(TypeCoercionVerificationTest):
     def get_iovals(self):
         return {'a': self.BeforeCoercionType()}
     
-    def make_tspecs(self, tspec_kind, **kwargs):
+    def make_iospecs(self, iospec_kind, **kwargs):
         result = {
-            tspec_kind: {
+            iospec_kind: {
                 'a': self.YesCoercionType
                 }
             }
         result.update(kwargs)
         return result
     
-    def coercion_test(self, tspecs):
-        self.type_test('a', self.YesCoercionType, tspecs=tspecs)
+    def coercion_test(self, iospecs):
+        self.type_test('a', self.YesCoercionType, iospecs=iospecs)
     
-    def coercion_argument_test(self, tspec_kind):
-        tspecs = self.make_tspecs(tspec_kind)
+    def coercion_argument_test(self, iospec_kind):
+        iospecs = self.make_iospecs(iospec_kind)
         
-        self.coercion_test(tspecs)
+        self.coercion_test(iospecs)
     
     def test_coercion_required(self):
         self.coercion_argument_test('required')
@@ -791,7 +789,7 @@ class TestTypeCoercionRequiredOverridesOptional(TypeCoercionVerificationTest):
     """ Confirm that when 'required' and 'optional' are both
         present, 'required' overrides 'optional. """
     
-    def get_tspecs(self):
+    def get_iospecs(self):
         return {
             'required': {'a': self.YesCoercionType},
             'optional': {'a': self.NoCoercionType},
@@ -811,12 +809,12 @@ class TestTypeCoercionOther(TypeCoercionTest):
         return {}
     
     def coercion_test(self, type_obj, iovalue, expected):
-        tspecs = {
+        iospecs = {
             'required': {'a': type_obj}
             }
         iovals = {'a': iovalue}
         
-        result = self.get_result_value('a', tspecs=tspecs, iovals=iovals)
+        result = self.get_result_value('a', iospecs=iospecs, iovals=iovals)
         
         assert result == expected
     
@@ -855,7 +853,7 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
 
 class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     """ Confirm that input values coerce correctly. """
-    coercion_functions = ioprocess.ioprocess.default_coercion_functions_input
+    coercion_functions = ioprocess.ioprocess.default_input_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -910,7 +908,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         
         On output, some value types are coerced to string values by default.
         This is done with JSON-serialization in mind. """
-    coercion_functions = ioprocess.ioprocess.default_coercion_functions_output
+    coercion_functions = ioprocess.ioprocess.default_output_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -955,19 +953,19 @@ class TestTypeCoercionCycle(unittest.TestCase):
         result is equal to the starting value. """
     
     def coercion_cycle_test(self, type_obj, starting_value):
-        output_processor = ioprocess.output_processor()
-        input_processor = ioprocess.input_processor()
+        output_processor = ioprocess.default_output_processor()
+        input_processor = ioprocess.default_input_processor()
         
-        tspec =  {'value': type_obj}
+        iospec =  {'value': type_obj}
         
         output_result = output_processor.coerce(
             iovals={'value': starting_value},
-            required=tspec,
+            required=iospec,
             )
         
         final_result = input_processor.coerce(
             iovals=output_result,
-            required=tspec,
+            required=iospec,
             )
         
         final_value = final_result['value']
@@ -989,31 +987,30 @@ class TestTypeCoercionCycle(unittest.TestCase):
 
 # -------------------------- IOManager tests ---------------------------
 
-@pytest.mark.a
 class IOManagerTest(unittest.TestCase):
     """ Test the 'IOManager' class. """
     def process_test(
         self,
         iomanager,
         process_kind,
-        tspec,
+        iospec,
         iovals,
         expected=None,
         ):
         method_name = 'process_' + process_kind
         process_method = getattr(iomanager, method_name)
-        result = process_method(iovals, required=tspec)
+        result = process_method(iovals, required=iospec)
         assert result == expected
 
 class TestIOManagerProcessBasic(IOManagerTest):
     def no_coercion_test(self, process_kind):
         iomanager = IOManager()
         
-        tspec = {'a': object}
+        iospec = {'a': object}
         expected = {'a': object()}
         iovals = expected.copy()
         
-        self.process_test(iomanager, process_kind, tspec, iovals, expected)
+        self.process_test(iomanager, process_kind, iospec, iovals, expected)
     
     def test_process_input(self):
         self.no_coercion_test('input')
@@ -1041,9 +1038,9 @@ class TestIOManagerProcessCoercion(IOManagerTest):
             coercion_functions={self.InternalType: coercion_function}
             )
         
-        tspec = {'a': self.InternalType}
+        iospec = {'a': self.InternalType}
         
-        self.process_test(iomanager, process_kind, tspec, iovals, expected)
+        self.process_test(iomanager, process_kind, iospec, iovals, expected)
     
     def test_process_input(self):
         expected_value = self.InternalType()
@@ -1079,11 +1076,11 @@ class TestIOManagerProcessTypecheck(IOManagerTest):
             typecheck_functions={ExpectedType: reject_all}
             )
         
-        tspec = {'a': ExpectedType}
+        iospec = {'a': ExpectedType}
         iovals = {'a': ExpectedType()}
         
         with pytest.raises(ConfirmationError):
-            self.process_test(iomanager, process_kind, tspec, iovals)
+            self.process_test(iomanager, process_kind, iospec, iovals)
     
     def test_process_input(self):
         self.typecheck_test('input')
@@ -1109,11 +1106,11 @@ class IOManagerPrecedenceTest(IOManagerTest):
         
         iomanager = IOManager(**init_kwargs)
         
-        tspec = {'a': ExpectedType}
+        iospec = {'a': ExpectedType}
         iovals = {'a': ExpectedType()}
         
         with pytest.raises(ConfirmationError):
-            self.process_test(iomanager, process_kind, tspec, iovals)
+            self.process_test(iomanager, process_kind, iospec, iovals)
 
 class TestIOManagerPrecedenceCoercion(IOManagerPrecedenceTest):
     """ Confirm that 'input_coercion_functions' and 'output_coercion_functions'

@@ -8,7 +8,7 @@ import uuid
 
 """ Jargon:
     'ioval' --> 'Input/Output value'
-    'tspec' --> 'Type specification dictionary'
+    'iospec' --> 'Input/Output specification dictionary'
     """
 
 # --------------------------- Error classes ----------------------------
@@ -18,7 +18,7 @@ class Error(Exception):
 
 class VerificationFailureError(Error):
     """ The 'iovals_dict' value submitted for processing did not conform to the
-        provided 'tspec' values. """
+        provided 'iospec' values. """
 
 class WrongTypeError(Error):
     """ An 'ioval' value could not be coerced to the expected type.
@@ -69,24 +69,24 @@ class AnyType(object):
 class ListOf(object):
     """ A list of items of a specified type.
         
-        The specified type can be an tspec dictionary. """
+        The specified type can be an iospec dictionary. """
     
-    def __init__(self, tspec_obj):
-        self.tspec_obj = tspec_obj
+    def __init__(self, iospec_obj):
+        self.iospec_obj = iospec_obj
         
         type_name_self = type(self).__name__.strip("'").strip('"')
-        if isinstance(tspec_obj, dict):
-            type_name_obj = str(tspec_obj)
+        if isinstance(iospec_obj, dict):
+            type_name_obj = str(iospec_obj)
         else:
-            type_name_obj = tspec_obj.__name__.strip("'").strip('"')
+            type_name_obj = iospec_obj.__name__.strip("'").strip('"')
         
         self.__name__ = type_name_self + "({})".format(type_name_obj)
     
     def make_dict(self, length):
-        return {i: self.tspec_obj for i in range(length)}
+        return {i: self.iospec_obj for i in range(length)}
     
     def __repr__(self):
-        return "{}({})".format(type(self).__name__, repr(self.tspec_obj))
+        return "{}({})".format(type(self).__name__, repr(self.iospec_obj))
 
 
 
@@ -133,60 +133,60 @@ class TypeNameRepresentation(object):
         result = '<{}>'.format(result)
         return result
 
-def coerce_unicode_input(ioval):
-    if not isinstance(ioval, str):
-        return ioval
+def coerce_unicode_input(value):
+    if not isinstance(value, str):
+        return value
     
-    return unicode(ioval)
+    return unicode(value)
 
-def coerce_decimal_input(ioval):
-    if not isinstance(ioval, int):
-        return ioval
+def coerce_decimal_input(value):
+    if not isinstance(value, int):
+        return value
     
-    return decimal.Decimal(ioval)
+    return decimal.Decimal(value)
 
-def coerce_uuid_input(ioval):
-    if not isinstance(ioval, basestring):
-        return ioval
+def coerce_uuid_input(value):
+    if not isinstance(value, basestring):
+        return value
     
     try:
-        return uuid.UUID(ioval)
+        return uuid.UUID(value)
     except ValueError:
         pass
     
-    return ioval
+    return value
 
-def coerce_datetime_input(ioval):
-    if not isinstance(ioval, basestring):
-        return ioval
+def coerce_datetime_input(value):
+    if not isinstance(value, basestring):
+        return value
     
     try:
-        return dateutil.parser.parse(ioval)
+        return dateutil.parser.parse(value)
     except ValueError:
         pass
     
-    return ioval
+    return value
 
-default_coercion_functions_input = {
+default_input_coercion_functions = {
     unicode: coerce_unicode_input,
     decimal.Decimal: coerce_decimal_input,
     uuid.UUID: coerce_uuid_input,
     datetime.datetime: coerce_datetime_input,
     }
 
-def coerce_uuid_output(ioval):
-    if not isinstance(ioval, uuid.UUID):
-        return ioval
+def coerce_uuid_output(value):
+    if not isinstance(value, uuid.UUID):
+        return value
     
-    return str(ioval)
+    return str(value)
 
-def coerce_datetime_output(ioval):
-    if not isinstance(ioval, datetime.datetime):
-        return ioval
+def coerce_datetime_output(value):
+    if not isinstance(value, datetime.datetime):
+        return value
     
-    return ioval.isoformat()
+    return value.isoformat()
 
-default_coercion_functions_output = {
+default_output_coercion_functions = {
     uuid.UUID: coerce_uuid_output,
     datetime.datetime: coerce_datetime_output,
     }
@@ -212,13 +212,13 @@ class IOProcessor(object):
         unlimited=False,
         ):
         iovals_dict = iovals.copy()
-        required_tspec = required.copy()
-        optional_tspec = optional.copy()
+        required_iospec = required.copy()
+        optional_iospec = optional.copy()
         
-        combined_tspec = combine_tspecs(required_tspec, optional_tspec)
+        combined_iospec = combine_iospecs(required_iospec, optional_iospec)
         
         missing = self.difference_dict(
-            required_tspec,
+            required_iospec,
             iovals_dict,
             )
         if missing is NoDifference:
@@ -227,9 +227,9 @@ class IOProcessor(object):
         if unlimited:
             """ When 'unlimited=True', only top-level keys are unlimited.
                 Verification still occurs recursively for keys specified in the
-                'combined_tspec'. """
+                'combined_iospec'. """
             possibly_unknown_keys = (
-                set(iovals_dict.keys()) & set(combined_tspec.keys())
+                set(iovals_dict.keys()) & set(combined_iospec.keys())
                 )
             possibly_unknown_iovals = {
                 ikey: ivalue
@@ -242,14 +242,14 @@ class IOProcessor(object):
         
         unknown = self.difference_dict(
             possibly_unknown_iovals,
-            combined_tspec,
+            combined_iospec,
             result_modifier=modify_unknown_result
             )
         if unknown is NoDifference:
             unknown = {}
         
         try:
-            self.confirm_type_dict(iovals_dict, combined_tspec)
+            self.confirm_type_dict(iovals_dict, combined_iospec)
         except WrongTypeError as exc:
             wrong_types = exc.failure_result
         else:
@@ -275,14 +275,17 @@ class IOProcessor(object):
         
         raise VerificationFailureError(err_msg)
 
-    def difference_ioval(self, item_a, item_b=NotProvided, result_modifier=None):
+    def difference_ioval(
+        self,
+        item_a,
+        item_b=NotProvided,
+        result_modifier=None
+        ):
         if all_are_instances((item_a, item_b), dict):
             return self.difference_dict(item_a, item_b, result_modifier)
         
         if all_are_instances((item_a, item_b), (list, ListOf)):
             return self.difference_list(item_a, item_b, result_modifier)
-        
-        # 'item_a' is a type object or a builtin instance.
         
         if item_b is NotProvided:
             if result_modifier:
@@ -351,17 +354,17 @@ class IOProcessor(object):
         
         raise WrongTypeError(expected_type, ioval)
     
-    def confirm_type_dict(self, iovals_dict, tspec, nonetype_ok=True):
+    def confirm_type_dict(self, iovals_dict, iospec, nonetype_ok=True):
         if not isinstance(iovals_dict, dict):
             raise WrongTypeError(dict, iovals_dict)
         
         wrong_types = {}
         
         for key, ioval in iovals_dict.items():
-            if key not in tspec:
+            if key not in iospec:
                 continue
             
-            expected_type = tspec[key]
+            expected_type = iospec[key]
             
             try:
                 self.confirm_type_ioval(ioval, expected_type, nonetype_ok)
@@ -380,9 +383,9 @@ class IOProcessor(object):
             raise WrongTypeError(list, iovals_list)
         
         iovals_dict = make_dict_from_list(iovals_list)
-        tspec = listof.make_dict(len(iovals_list))
+        iospec = listof.make_dict(len(iovals_list))
         
-        self.confirm_type_dict(iovals_dict, tspec, nonetype_ok=False)
+        self.confirm_type_dict(iovals_dict, iospec, nonetype_ok=False)
     
     def coerce(
         self,
@@ -391,11 +394,11 @@ class IOProcessor(object):
         optional={},
         ):
         iovals_dict = iovals.copy()
-        required_tspec = required.copy()
-        optional_tspec = optional.copy()
-        combined_tspec = combine_tspecs(required_tspec, optional_tspec)
+        required_iospec = required.copy()
+        optional_iospec = optional.copy()
+        combined_iospec = combine_iospecs(required_iospec, optional_iospec)
         
-        return self.coerce_dict(iovals_dict, combined_tspec)
+        return self.coerce_dict(iovals_dict, combined_iospec)
     
     def coerce_ioval(self, ioval, expected_type, nonetype_ok=True):
         # Coerce container types.
@@ -415,12 +418,12 @@ class IOProcessor(object):
         
         return result
     
-    def coerce_dict(self, iovals_dict, tspec, nonetype_ok=True):
+    def coerce_dict(self, iovals_dict, iospec, nonetype_ok=True):
         result_iovals = {}
         
         for key, ioval in iovals_dict.items():
             try:
-                expected_type = tspec[key]
+                expected_type = iospec[key]
             except KeyError:
                 result_iovals[key] = ioval
                 continue
@@ -431,21 +434,15 @@ class IOProcessor(object):
     
     def coerce_list(self, iovals_list, listof):
         iovals_dict = make_dict_from_list(iovals_list)
-        tspec = listof.make_dict(len(iovals_list))
+        iospec = listof.make_dict(len(iovals_list))
         
-        result_dict = self.coerce_dict(iovals_dict, tspec)
+        result_dict = self.coerce_dict(iovals_dict, iospec)
         
         result_list = [
             result_dict[ikey] for ikey in sorted(result_dict.keys())
             ]
         
         return result_list
-
-def input_processor():
-    return IOProcessor(coercion_functions=default_coercion_functions_input)
-
-def output_processor():
-    return IOProcessor(coercion_functions=default_coercion_functions_output)
 
 class IOManager(object):
     def __init__(self, **kwargs):
@@ -525,6 +522,18 @@ class IOManager(object):
         
         return coerced_iovals
 
+def default_input_processor():
+    return IOProcessor(coercion_functions=default_input_coercion_functions)
+
+def default_output_processor():
+    return IOProcessor(coercion_functions=default_output_coercion_functions)
+
+def default_iomanager():
+    return IOManager(
+        input_coercion_functions=default_input_coercion_functions,
+        output_coercion_functions=default_output_coercion_functions,
+        )
+
 
 
 # ----------------------------- Functions ------------------------------
@@ -537,7 +546,7 @@ def modify_unknown_result(ioval):
     
     return ioval
 
-def tspecs_from_callable(callable_obj):
+def iospecs_from_callable(callable_obj):
     argspec = inspect.getargspec(callable_obj)
     
     parameters = list(argspec.args)
@@ -551,12 +560,12 @@ def tspecs_from_callable(callable_obj):
     required_list = parameters[:optionals_start]
     optional_list = parameters[optionals_start:]
     
-    required_tspec = {ikey: AnyType for ikey in required_list}
-    optional_tspec = {ikey: AnyType for ikey in optional_list}
+    required_iospec = {ikey: AnyType for ikey in required_list}
+    optional_iospec = {ikey: AnyType for ikey in optional_list}
     
     result = {
-        'required': required_tspec,
-        'optional': optional_tspec,
+        'required': required_iospec,
+        'optional': optional_iospec,
         }
     return result
 
@@ -573,29 +582,29 @@ def all_are_instances(items, type_objs):
     
     return True
 
-def combine_tspecs(tspec_a, tspec_b):
+def combine_iospecs(iospec_a, iospec_b):
     result = {}
-    keys_a = set(tspec_a.keys())
-    keys_b = set(tspec_b.keys())
+    keys_a = set(iospec_a.keys())
+    keys_b = set(iospec_b.keys())
     all_keys = keys_a | keys_b
     
     for key in keys_a & keys_b:
         if (
-            isinstance(tspec_a[key], dict) and
-            isinstance(tspec_b[key], dict)
+            isinstance(iospec_a[key], dict) and
+            isinstance(iospec_b[key], dict)
             ):
-            result[key] = combine_tspecs(tspec_a[key], tspec_b[key])
+            result[key] = combine_iospecs(iospec_a[key], iospec_b[key])
             all_keys.remove(key)
     
     for key in all_keys:
-        result[key] = tspec_a.get(key, tspec_b.get(key))
+        result[key] = iospec_a.get(key, iospec_b.get(key))
     
     return result
 
-def make_missing_output(missing_tspec):
+def make_missing_output(missing_iospec):
     result = {}
     
-    for key, value in missing_tspec.items():
+    for key, value in missing_iospec.items():
         if isinstance(value, dict):
             result[key] = make_missing_output(value)
             continue
