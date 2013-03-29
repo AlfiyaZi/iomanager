@@ -39,10 +39,25 @@ class WrongTypeDictError(WrongTypeError):
         self.failure_result = failure_dict
 
 class TypeCheckFailureError(Error):
-    pass
+    """ A value fails type confirmation.
+        
+        Raised by a custom 'typecheck' (type confirmation) function to force a
+        value of the expected type to fail confirmation.
+        
+        Example: A function to reject subclasses of the expected type.
+        
+        def reject_subclasses(value, expected_type):
+            if issubclass(type(value), expected_type):
+                raise TypeCheckFailureError
+            
+            return value
+        """
 
 class TypeCheckSuccessError(Error):
-    pass
+    """ A value passes type confirmation.
+        
+        Raised by a custom 'typecheck' (type confirmation) function to allow
+        a value not of the expected type to pass confirmation. """
 
 
 
@@ -181,8 +196,13 @@ default_coercion_functions_output = {
 # ----------------------------- Processor ------------------------------
 
 class IOProcessor(object):
-    def __init__(self, coercion_functions={}):
+    def __init__(
+        self,
+        coercion_functions={},
+        typecheck_functions={},
+        ):
         self.coercion_functions = coercion_functions.copy()
+        self.typecheck_functions = typecheck_functions.copy()
     
     def verify(
         self,
@@ -307,6 +327,19 @@ class IOProcessor(object):
         if isinstance(expected_type, ListOf):
             self.confirm_type_list(ioval, expected_type)
             return
+        
+        # Custom type-checking function.
+        try:
+            typecheck_function = self.typecheck_functions[expected_type]
+        except KeyError:
+            pass
+        else:
+            try:
+                typecheck_function(expected_type)
+            except TypeCheckSuccessError:
+                return
+            except TypeCheckFailureError:
+                raise WrongTypeError(expected_type, ioval)
         
         # General case.
         if (

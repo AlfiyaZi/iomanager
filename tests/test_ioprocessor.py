@@ -641,10 +641,10 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
         in use. """
     def get_process_result(self, value, custom_function):
         ioprocessor = IOProcessor(
-            type_checking_functions={self.CustomType: custom_function}
+            typecheck_functions={self.CustomType: custom_function}
             )
         ioprocessor.verify(
-            iovals={'a': self.CustomType()},
+            iovals={'a': value},
             required={'a': self.CustomType}
             )
     
@@ -655,7 +655,6 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
         with pytest.raises(VerificationFailureError):
             self.process_passes_test(*pargs)
     
-    @pytest.mark.xfail
     def test_type_check_failure_error(self):
         """ When a custom type-checking function raises a TypeCheckFailureError,
             type checking fails even if the value would have passed type
@@ -667,7 +666,6 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
             raise TypeCheckFailureError
         self.process_raises_test(self.CustomType(), reject_value)
     
-    @pytest.mark.xfail
     def test_type_check_success_error(self):
         """ When a custom type-checking function raises a TypeCheckSuccessError,
             type checking passes even if the value would have been rejected
@@ -675,36 +673,6 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
         def accept_value(value):
             raise TypeCheckSuccessError
         self.process_passes_test(self.InvalidType(), accept_value)
-
-@pytest.mark.a
-class TestTypeCheckingDefaultFunctions(unittest.TestCase):   
-    """ Confirm that default type checking functions behave as expected. """ 
-    def default_function_passes_test(self, value, expected_type):
-        type_checking_function = (
-            ioprocess.default_type_checking_functions[expected_type]
-            )
-        type_checking_function(value)
-    
-    def default_function_raises_test(self, *pargs):
-        with pytest.raises(VerificationFailureError):
-            self.default_function_passes_test(*pargs)
-    
-    def test_int_gets_int_passes(self):
-        self.default_function_passes_test(123, int)
-    
-    def test_decimal_gets_decimal_passes(self):
-        self.default_function_passes_test(
-            decimal.Decimal('1.23'),
-            decimal.Decimal,
-            )
-    
-    def test_int_gets_bool_fails(self):
-        bool_value = True
-        self.default_function_raises_test(bool_value, int)
-    
-    def test_decimal_gets_bool_fails(self):
-        bool_value = True
-        self.default_function_raises_test(bool_value, decimal.Decimal)
 
 
 
