@@ -1,13 +1,13 @@
 from setuptools import setup
 
 setup(
-    name='ioprocess',
+    name='iomanager',
     version='0.2.1',
     author='Josh Matthias',
-    author_email='python.ioprocess@gmail.com',
-    packages=['ioprocess'],
+    author_email='python.iomanager@gmail.com',
+    packages=['iomanager'],
     scripts=[],
-    url='https://github.com/jmatthias/ioprocess',
+    url='https://github.com/jmatthias/iomanager',
     license='LICENSE.txt',
     description=('Guarantee structure and composition of input and output.'),
     long_description=open('README.txt').read(),
