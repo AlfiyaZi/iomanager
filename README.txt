@@ -1,9 +1,9 @@
 =========
-ioprocess
+iomanager
 =========
 
-IOProcess is a tool for guaranteeing the structure and composition of input and
-output.
+IOManager is a tool for managing the structure and composition of input and
+output, with JSON in mind.
 
 
 
