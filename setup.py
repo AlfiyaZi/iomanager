@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='iomanager',
-    version='0.2.1',
+    version='0.2.2',
     author='Josh Matthias',
     author_email='python.iomanager@gmail.com',
     packages=['iomanager'],
