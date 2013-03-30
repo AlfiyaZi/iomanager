@@ -1,4 +1,4 @@
-""" Copyright (c) 2013 Josh Matthias <python.ioprocess@gmail.com> """
+""" Copyright (c) 2013 Josh Matthias <python.iomanager@gmail.com> """
 
 import datetime
 import dateutil
@@ -8,12 +8,10 @@ import string
 import uuid
 import unittest
 
-import ioprocess
-from ioprocess import (
+import iomanager
+from iomanager import (
     IOProcessor,
     IOManager,
-    )
-from ioprocess.ioprocess import (
     VerificationFailureError,
     TypeCheckSuccessError,
     TypeCheckFailureError,
@@ -155,7 +153,7 @@ class TestListOf(VerificationTest):
     def trial_iospecs(self):
         return dict(
             required={
-                'a': ioprocess.ListOf(int)
+                'a': iomanager.ListOf(int)
             }
         )
     
@@ -183,7 +181,7 @@ class TestListOf(VerificationTest):
 class ListOfStructuredTest(object):
     def listof_iospec(self):
         return {
-            'a': ioprocess.ListOf(
+            'a': iomanager.ListOf(
                     {'a': int,}
                 )
             }
@@ -235,7 +233,7 @@ class TestListOfStructuredRequired(ListOfStructuredTest, VerificationTest):
 class ListOfStructuredNestedTest(object):
     def listof_iospec(self):
         return {
-            'a':  ioprocess.ListOf(
+            'a':  iomanager.ListOf(
                 {
                     'a': {
                         'b': int
@@ -281,8 +279,8 @@ class TestListOfNestedListOf(VerificationTest):
     def trial_iospecs(self):
         return dict(
             required={
-                'a': ioprocess.ListOf(
-                    ioprocess.ListOf(int)
+                'a': iomanager.ListOf(
+                    iomanager.ListOf(int)
                 )
             }
         )
@@ -597,7 +595,7 @@ class TestTypeCheckingBasic(TypeCheckingTest):
         arbitrary_value = ArbitraryType()
         self.process_passes_test(
             value=ArbitraryType(),
-            expected_type=ioprocess.AnyType,
+            expected_type=iomanager.AnyType,
             )
 
 class TypeCheckingExtendedTest(object):
@@ -642,7 +640,7 @@ class TestTypeCheckingListOf(TypeCheckingTest, TypeCheckingExtendedTest):
         return [value]
     
     def make_extended_iospec(self):
-        return ioprocess.ListOf(self.CustomType)
+        return iomanager.ListOf(self.CustomType)
 
 class TestTypeCheckingCustomFunction(TypeCheckingTest):
     """ Confirm type checking behavior when custom type-checking functions are
@@ -693,7 +691,7 @@ def retrieve_location(location_tuple, container):
     this_index = location_tuple[0]
     remainder = location_tuple[1:]
     
-    if isinstance(container, ioprocess.ListOf):
+    if isinstance(container, iomanager.ListOf):
         target_value = container.iospec_obj
     else:
         target_value = container[this_index]
@@ -829,7 +827,7 @@ class TestTypeCoercionOther(TypeCoercionTest):
         trial_list = list(u'aWMp8CAjRjMd039Hy1o4fLCv0RsVZxTB')
         expected = list(trial_list)
         
-        type_obj = ioprocess.ListOf(unicode)
+        type_obj = iomanager.ListOf(unicode)
         self.coercion_test(type_obj, trial_list, expected)
 
 class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
@@ -853,7 +851,7 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
 
 class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     """ Confirm that input values coerce correctly. """
-    coercion_functions = ioprocess.ioprocess.default_input_coercion_functions
+    coercion_functions = iomanager.default_input_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -908,7 +906,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         
         On output, some value types are coerced to string values by default.
         This is done with JSON-serialization in mind. """
-    coercion_functions = ioprocess.ioprocess.default_output_coercion_functions
+    coercion_functions = iomanager.default_output_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -953,8 +951,8 @@ class TestTypeCoercionCycle(unittest.TestCase):
         result is equal to the starting value. """
     
     def coercion_cycle_test(self, type_obj, starting_value):
-        output_processor = ioprocess.default_output_processor()
-        input_processor = ioprocess.default_input_processor()
+        output_processor = iomanager.default_output_processor()
+        input_processor = iomanager.default_input_processor()
         
         iospec =  {'value': type_obj}
         

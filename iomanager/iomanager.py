@@ -1,4 +1,4 @@
-""" Copyright (c) 2013 Josh Matthias <python.ioprocess@gmail.com> """
+""" Copyright (c) 2013 Josh Matthias <python.iomanager@gmail.com> """
 
 import datetime
 import dateutil.parser

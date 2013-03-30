@@ -1,6 +1,6 @@
 import pytest
 import unittest
-from ioprocess import (
+from iomanager import (
     IOProcessor,
     AnyType,
     iospecs_from_callable,
