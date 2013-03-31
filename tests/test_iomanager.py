@@ -1148,6 +1148,26 @@ class TestIOManagerPrecedenceTypecheck(IOManagerPrecedenceTest):
     def test_output_typecheck_functions_overrides(self):
         self.precedence_test('typecheck', 'output')
 
+@pytest.mark.a
+class TestIOManagerMethods(unittest.TestCase):
+    """ Test the separate 'coerce' and 'verify' methods. """
+    def method_test(self, method_name):
+        iomanager = IOManager()
+        method_callable = getattr(iomanager, method_name)
+        method_callable()
+    
+    def test_coerce_input(self):
+        self.method_test('coerce_input')
+    
+    def test_coerce_output(self):
+        self.method_test('coerce_output')
+    
+    def test_verify_input(self):
+        self.method_test('verify_input')
+    
+    def test_verify_output(self):
+        self.method_test('verify_output')
+
 
 
 
