@@ -521,6 +521,22 @@ class IOManager(object):
         coerced_iovals = ioprocessor.coerce(iovals, required, optional)
         
         return coerced_iovals
+    
+    def coerce_input(self, *pargs, **kwargs):
+        ioprocessor = self.make_ioprocessor('input')
+        return ioprocessor.coerce(*pargs, **kwargs)
+    
+    def coerce_output(self, *pargs, **kwargs):
+        ioprocessor = self.make_ioprocessor('output')
+        return ioprocessor.coerce(*pargs, **kwargs)
+    
+    def verify_input(self, *pargs, **kwargs):
+        ioprocessor = self.make_ioprocessor('input')
+        return ioprocessor.verify(*pargs, **kwargs)
+    
+    def verify_output(self, *pargs, **kwargs):
+        ioprocessor = self.make_ioprocessor('output')
+        return ioprocessor.verify(*pargs, **kwargs)
 
 def default_input_processor():
     return IOProcessor(coercion_functions=default_input_coercion_functions)
