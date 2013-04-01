@@ -227,8 +227,15 @@ class IOProcessor(object):
         combined_iospec = combine_iospecs(required_iospec, optional_iospec)
         
         missing = self.difference_ioval(required_iospec, iovalue)
-        
         unknown = self.difference_ioval(iovalue, combined_iospec)
+        
+        if unlimited and all_are_instances((unknown, combined_iospec), dict):
+            """ When unlimited=True, top-level keys are unlimited. """
+            for ikey in unknown.keys():
+                if ikey not in combined_iospec:
+                    del unknown[ikey]
+            if not unknown:
+                unknown = NoDifference
         
         try:
             self.confirm_type_ioval(iovalue, combined_iospec)
