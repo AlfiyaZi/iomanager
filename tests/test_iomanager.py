@@ -556,7 +556,7 @@ class TestTypeCheckingBasic(TypeCheckingTest):
         
         ioprocessor = IOProcessor()
         ioprocessor.verify(
-            iovals={'a': value},
+            iovalue={'a': value},
             **{iospec_kind: {'a': expected_type}}
             )
     
@@ -611,7 +611,7 @@ class TypeCheckingExtendedTest(object):
             }
         
         ioprocessor.verify(
-            iovals=iovals,
+            iovalue=iovals,
             required=required
             )
     
@@ -650,7 +650,7 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
             typecheck_functions={self.CustomType: custom_function}
             )
         ioprocessor.verify(
-            iovals={'a': value},
+            iovalue={'a': value},
             required={'a': self.CustomType}
             )
     
@@ -806,11 +806,11 @@ class TestTypeCoercionOther(TypeCoercionTest):
         """ For this test case, no coercion functions are assigned. """
         return {}
     
-    def coercion_test(self, type_obj, iovalue, expected):
+    def coercion_test(self, type_obj, value, expected):
         iospecs = {
             'required': {'a': type_obj}
             }
-        iovals = {'a': iovalue}
+        iovals = {'a': value}
         
         result = self.get_result_value('a', iospecs=iospecs, iovals=iovals)
         
@@ -836,10 +836,10 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
         """ This class is used to test a coercion function's effect upon an
             arbitrarily-typed value. """
     
-    def coercion_test(self, type_obj, iovalue, expected):
+    def coercion_test(self, type_obj, value, expected):
         coercion_function = self.coercion_functions[type_obj]
         
-        result = coercion_function(iovalue)
+        result = coercion_function(value)
         assert result == expected
     
     def arbitrary_value_test(self, type_obj):
@@ -880,7 +880,7 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
         dt_string = dt_value.isoformat()
         self.coercion_test(
             datetime.datetime,
-            iovalue=dt_string,
+            value=dt_string,
             expected=dt_value,
             )
     
@@ -892,7 +892,7 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
         uuid_string = str(uuid_value)
         self.coercion_test(
             uuid.UUID,
-            iovalue=uuid_string,
+            value=uuid_string,
             expected=uuid_value,
             )
     
@@ -924,7 +924,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         dt_string = dt_value.isoformat()
         self.coercion_test(
             datetime.datetime,
-            iovalue=dt_value,
+            value=dt_value,
             expected=dt_string,
             )
     
@@ -940,7 +940,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         uuid_string = str(uuid_value)
         self.coercion_test(
             uuid.UUID,
-            iovalue=uuid_value,
+            value=uuid_value,
             expected=uuid_string,
             )
 
@@ -957,12 +957,12 @@ class TestTypeCoercionCycle(unittest.TestCase):
         iospec =  {'value': type_obj}
         
         output_result = output_processor.coerce(
-            iovals={'value': starting_value},
+            iovalue={'value': starting_value},
             required=iospec,
             )
         
         final_result = input_processor.coerce(
-            iovals=output_result,
+            iovalue=output_result,
             required=iospec,
             )
         
@@ -1153,7 +1153,7 @@ class TestIOManagerMethods(unittest.TestCase):
     def method_test(self, method_name):
         iomanager = IOManager()
         method_callable = getattr(iomanager, method_name)
-        method_callable(iovals={})
+        method_callable(iovalue={})
     
     def test_coerce_input(self):
         self.method_test('coerce_input')

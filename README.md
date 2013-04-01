@@ -76,7 +76,7 @@ def handle_request(request):
     input_values = json.loads(request.body)
     try:
         coerced_input_values = manager.process_input(
-            iovals=input_values,
+            iovalue=input_values,
             required={'a': unicode, 'b': ListOf(int)},
             optional={'c': bool},
             )
@@ -87,7 +87,7 @@ def handle_request(request):
     
     try:
         coerced_result_values = manager.process_output(
-            iovals=result_values,
+            iovalue=result_values,
             required={
                 'when': datetime.datetime,
                 'result': {'x': unicode, 'y':int}
@@ -161,7 +161,7 @@ def handle_request(request):
     
     try:
         IOManager().verify_input(
-            iovals=input_values,
+            iovalue=input_values,
             required={'x': int, 'y': int}
             )
     except VerificationFailureError as exc:
@@ -252,14 +252,14 @@ manager = IOManager(
 def handle_request(request):
     input_values = json.loads(request.body)
     coerced_input_values = manager.coerce_input(
-        iovals=input_values,
+        iovalue=input_values,
         required={'some_date': datetime.datetime},
         )
     
     result = api_method_nextweek(**coerced_input_values)
     
     coerced_result = manager.coerce_output(
-        iovals=result,
+        iovalue=result,
         required=datetime.datetime,
         )
     return webob.response(body=json.dumps(coerced_result))
@@ -295,14 +295,14 @@ manager = json_iomanager()
 def handle_request(request):
     input_values = json.loads(request.body)
     coerced_input_values = manager.coerce_input(
-        iovals=input_values,
+        iovalue=input_values,
         required={'some_date': datetime.datetime},
         )
     
     result = api_method_nextweek(**coerced_input_values)
     
     coerced_result = manager.coerce_output(
-        iovals=result,
+        iovalue=result,
         required=datetime.datetime,
         )
     return webob.response(body=json.dumps(coerced_result))

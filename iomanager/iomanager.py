@@ -17,8 +17,8 @@ class Error(Exception):
     """ Base class for errors. """
 
 class VerificationFailureError(Error):
-    """ The 'iovals_dict' value submitted for processing did not conform to the
-        provided 'iospec' values. """
+    """ The 'iovalue' value submitted for processing did not conform to the
+        provided 'iospec' value. """
     def __init__(self, error_msg):
         self.error_msg = error_msg
 
@@ -208,12 +208,12 @@ class IOProcessor(object):
     
     def verify(
         self,
-        iovals,
+        iovalue,
         required={},
         optional={},
         unlimited=False,
         ):
-        iovals_dict = iovals.copy()
+        iovals_dict = iovalue.copy()
         required_iospec = required.copy()
         optional_iospec = optional.copy()
         
@@ -391,11 +391,11 @@ class IOProcessor(object):
     
     def coerce(
         self,
-        iovals,
+        iovalue,
         required={},
         optional={},
         ):
-        iovals_dict = iovals.copy()
+        iovals_dict = iovalue.copy()
         required_iospec = required.copy()
         optional_iospec = optional.copy()
         combined_iospec = combine_iospecs(required_iospec, optional_iospec)
@@ -496,7 +496,7 @@ class IOManager(object):
     
     def process_input(
         self,
-        iovals,
+        iovalue,
         required={},
         optional={},
         unlimited=False,
@@ -504,14 +504,14 @@ class IOManager(object):
         """ coerce(), then verify(). """
         ioprocessor = self.make_ioprocessor('input')
         
-        coerced_iovals = ioprocessor.coerce(iovals, required, optional)
+        coerced_iovals = ioprocessor.coerce(iovalue, required, optional)
         ioprocessor.verify(coerced_iovals, required, optional, unlimited)
         
         return coerced_iovals
     
     def process_output(
         self,
-        iovals,
+        iovalue,
         required={},
         optional={},
         unlimited=False,
@@ -519,8 +519,8 @@ class IOManager(object):
         """ verify(), then coerce(). """
         ioprocessor = self.make_ioprocessor('output')
         
-        ioprocessor.verify(iovals, required, optional, unlimited)
-        coerced_iovals = ioprocessor.coerce(iovals, required, optional)
+        ioprocessor.verify(iovalue, required, optional, unlimited)
+        coerced_iovals = ioprocessor.coerce(iovalue, required, optional)
         
         return coerced_iovals
     
