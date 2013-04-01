@@ -38,6 +38,12 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
     def setUp(self):
         self.ioprocessor = IOProcessor()
     
+    def test_no_iospec_raises(self):
+        with pytest.raises(TypeError):
+            self.ioprocessor.verify(
+                iovalue=None
+                )
+    
     def object_passes_test(self, parameter_name):
         self.ioprocessor.verify(
             iovalue=object(),
@@ -81,9 +87,31 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
             required=object,
             optional=self.CustomType,
             )
+    
+    def unlimited_ignored_test(self, parameter_name):
+        """ When using non-container 'iovalue' and 'iospec' values, the
+            'unlimited' parameter is ignored. 'unlimited' only applies to 'dict'
+            and 'list' iospecs. """
+        with pytest.raises(VerificationFailureError):
+            self.ioprocessor.verify(
+                iovalue=object(),
+                unlimited=True,
+                **{parameter_name: self.CustomType}
+                )
+    
+    def test_required_unlimited_ignored(self):
+        self.unlimited_ignored_test('required')
+    
+    def test_optional_unlimited_ignored(self):
+        self.unlimited_ignored_test('optional')
 
 @pytest.mark.a
 class TestNonContainerIOValueCoerce(unittest.TestCase):
+    def test_no_iospec_raises(self):
+        with pytest.raises(TypeError):
+            self.ioprocessor.coerce(
+                iovalue=None
+                )
     
     def coercion_test(self, parameter_name):
         class BeforeCoercionType(object):
