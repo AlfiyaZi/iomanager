@@ -19,6 +19,8 @@ class Error(Exception):
 class VerificationFailureError(Error):
     """ The 'iovals_dict' value submitted for processing did not conform to the
         provided 'iospec' values. """
+    def __init__(self, error_msg):
+        self.error_msg = error_msg
 
 class WrongTypeError(Error):
     """ An 'ioval' value could not be coerced to the expected type.
@@ -521,6 +523,22 @@ class IOManager(object):
         coerced_iovals = ioprocessor.coerce(iovals, required, optional)
         
         return coerced_iovals
+    
+    def coerce_input(self, *pargs, **kwargs):
+        ioprocessor = self.make_ioprocessor('input')
+        return ioprocessor.coerce(*pargs, **kwargs)
+    
+    def coerce_output(self, *pargs, **kwargs):
+        ioprocessor = self.make_ioprocessor('output')
+        return ioprocessor.coerce(*pargs, **kwargs)
+    
+    def verify_input(self, *pargs, **kwargs):
+        ioprocessor = self.make_ioprocessor('input')
+        return ioprocessor.verify(*pargs, **kwargs)
+    
+    def verify_output(self, *pargs, **kwargs):
+        ioprocessor = self.make_ioprocessor('output')
+        return ioprocessor.verify(*pargs, **kwargs)
 
 def default_input_processor():
     return IOProcessor(coercion_functions=default_input_coercion_functions)

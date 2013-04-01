@@ -2,10 +2,10 @@
 Project History
 ===============
 
-This is ioprocess: a Python tool for guaranteeing the structure and composition
+This is iomanager: a Python tool for guaranteeing the structure and composition
 of input and output.
 
-ioprocess allows you to define the structure and data types for input paramaters
+iomanager allows you to define the structure and data types for input paramaters
 and output results. This tool was built with JSON serialization in mind.
 
 This project is an offshoot of the 'lcda' project, which is the python-based web
@@ -61,6 +61,20 @@ I hope this package will be useful to you.
 
 Josh Matthias
 2013-03-20
+
+[ Update - v0.2.2 ]
+
+I've changed the name of the distribution to 'iomanager'. This change reflects a
+refined concept for how the package works. It's necessary to call 'coerce' and
+'verify' in different orders for input and output, and also to use different
+coercion and 'typecheck' functions. I've added the IOManager class to suit these
+purposes. It instantiates IOProcessor as needed and calls its methods in the
+correct order for each situation. It's subclass-able for customization. In the
+process of developing this class I've refactored a lot of the codebase and
+improved clarity.
+
+Josh Matthias
+2013-03-30
 
 
 
