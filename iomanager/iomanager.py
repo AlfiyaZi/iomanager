@@ -214,6 +214,11 @@ class IOProcessor(object):
         optional=NotProvided,
         unlimited=False,
         ):
+        if required is NotProvided and optional is NotProvided:
+            raise TypeError(
+                " Either 'required' or 'optional' (or both) must be provided. "
+                )
+        
         required_iospec = required
         optional_iospec = optional
         
