@@ -19,8 +19,9 @@ class Error(Exception):
 class VerificationFailureError(Error):
     """ The 'iovalue' value submitted for processing did not conform to the
         provided 'iospec' value. """
-    def __init__(self, error_msg):
-        self.error_msg = error_msg
+    def __init__(self, *pargs, **kwargs):
+        self.error_msg = pargs[0]
+        super(VerificationFailureError, self).__init__(*pargs, **kwargs)
 
 class WrongTypeError(Error):
     """ An 'ioval' value could not be coerced to the expected type.
@@ -213,45 +214,16 @@ class IOProcessor(object):
         optional={},
         unlimited=False,
         ):
-        iovals_dict = iovalue.copy()
-        required_iospec = required.copy()
-        optional_iospec = optional.copy()
+        required_iospec = required
+        optional_iospec = optional
         
         combined_iospec = combine_iospecs(required_iospec, optional_iospec)
         
-        missing = self.difference_dict(
-            required_iospec,
-            iovals_dict,
-            )
-        if missing is NoDifference:
-            missing = {}
-        
-        if unlimited:
-            """ When 'unlimited=True', only top-level keys are unlimited.
-                Verification still occurs recursively for keys specified in the
-                'combined_iospec'. """
-            possibly_unknown_keys = (
-                set(iovals_dict.keys()) & set(combined_iospec.keys())
-                )
-            possibly_unknown_iovals = {
-                ikey: ivalue
-                for ikey, ivalue
-                in iovals_dict.items()
-                if ikey in possibly_unknown_keys
-                }
-        else:
-            possibly_unknown_iovals = iovals_dict
-        
-        unknown = self.difference_dict(
-            possibly_unknown_iovals,
-            combined_iospec,
-            result_modifier=modify_unknown_result
-            )
-        if unknown is NoDifference:
-            unknown = {}
+        missing = {}
+        unknown = {}
         
         try:
-            self.confirm_type_dict(iovals_dict, combined_iospec)
+            self.confirm_type_dict(iovalue, combined_iospec)
         except WrongTypeError as exc:
             wrong_types = exc.failure_result
         else:
@@ -600,24 +572,24 @@ def all_are_instances(items, type_objs):
     
     return True
 
-def combine_iospecs(iospec_a, iospec_b):
-    result = {}
-    keys_a = set(iospec_a.keys())
-    keys_b = set(iospec_b.keys())
-    all_keys = keys_a | keys_b
+def combine_iospecs(iospec_a=NotProvided, iospec_b=NotProvided):
+    if all_are_instances((iospec_a, iospec_b), dict):
+        return combine_iospecs_dict(iospec_a, iospec_b)
     
-    for key in keys_a & keys_b:
-        if (
-            isinstance(iospec_a[key], dict) and
-            isinstance(iospec_b[key], dict)
-            ):
-            result[key] = combine_iospecs(iospec_a[key], iospec_b[key])
-            all_keys.remove(key)
+    if iospec_a is NotProvided:
+        return iospec_b
+    return iospec_a
+
+def combine_iospecs_dict(iospec_a, iospec_b):
+    all_keys = set(iospec_a.keys()) | set(iospec_b.keys())
     
-    for key in all_keys:
-        result[key] = iospec_a.get(key, iospec_b.get(key))
-    
-    return result
+    return {
+        ikey: combine_iospecs(
+            iospec_a.get(ikey, NotProvided),
+            iospec_b.get(ikey, NotProvided),
+            )
+        for ikey in all_keys
+        }
 
 def make_missing_output(missing_iospec):
     result = {}
