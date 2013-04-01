@@ -76,7 +76,7 @@ def handle_request(request):
     input_values = json.loads(request.body)
     try:
         coerced_input_values = manager.process_input(
-            iovals=input_values,
+            iovalue=input_values,
             required={'a': unicode, 'b': ListOf(int)},
             optional={'c': bool},
             )
@@ -87,7 +87,7 @@ def handle_request(request):
     
     try:
         coerced_result_values = manager.process_output(
-            iovals=result_values,
+            iovalue=result_values,
             required={
                 'when': datetime.datetime,
                 'result': {'x': unicode, 'y':int}
@@ -161,7 +161,7 @@ def handle_request(request):
     
     try:
         IOManager().verify_input(
-            iovals=input_values,
+            iovalue=input_values,
             required={'x': int, 'y': int}
             )
     except VerificationFailureError as exc:
@@ -252,14 +252,14 @@ manager = IOManager(
 def handle_request(request):
     input_values = json.loads(request.body)
     coerced_input_values = manager.coerce_input(
-        iovals=input_values,
+        iovalue=input_values,
         required={'some_date': datetime.datetime},
         )
     
     result = api_method_nextweek(**coerced_input_values)
     
     coerced_result = manager.coerce_output(
-        iovals=result,
+        iovalue=result,
         required=datetime.datetime,
         )
     return webob.response(body=json.dumps(coerced_result))
@@ -268,9 +268,9 @@ def handle_request(request):
 "But wait!" you're saying. "Using ```iomanager``` seems to require a lot more
 code. Why would I want to use so much more code to accomplish the same thing?"
 
-The answer is **consistency**. Without ```iomanager```, you must include
-these transformations in each API function definition, for each parameter that
-requires transformation. With ```iomanager```, you can specify your coercion
+The answer is **consistency and reusability**. Without ```iomanager```, you must
+include these transformations in each API function definition, for each parameter
+that requires transformation. With ```iomanager```, you can specify your coercion
 functions once, and re-use the same ```handle_request``` function for every API
 function. There is a bit more to it of course; for an example of how
 ```iomanager``` can be used with a web framework, see
@@ -285,24 +285,24 @@ from datetime import timedelta
 import dateutil.parser
 import json
 import webob
-from iomanager import json_iomanager
+import iomanager
 
 def api_method_nextweek(some_date):
     return some_date + timedelta(days=7)
 
-manager = json_iomanager()
+manager = iomanager.json_tools.io_manager()
 
 def handle_request(request):
     input_values = json.loads(request.body)
     coerced_input_values = manager.coerce_input(
-        iovals=input_values,
+        iovalue=input_values,
         required={'some_date': datetime.datetime},
         )
     
     result = api_method_nextweek(**coerced_input_values)
     
     coerced_result = manager.coerce_output(
-        iovals=result,
+        iovalue=result,
         required=datetime.datetime,
         )
     return webob.response(body=json.dumps(coerced_result))

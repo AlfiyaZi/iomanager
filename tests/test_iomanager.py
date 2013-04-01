@@ -26,6 +26,124 @@ class ConfirmationError(Error):
     """ Raised to confirm that a particular function or method has been
         called. """
 
+
+
+# ------------------- Non-container 'iovalue' tests --------------------
+
+class TestNonContainerIOValueVerify(unittest.TestCase):
+    class CustomType(object):
+        """ A custom type for testing. """
+    
+    def setUp(self):
+        self.ioprocessor = IOProcessor()
+    
+    def test_no_iospec_passes(self):
+        self.ioprocessor.verify(
+            iovalue=object()
+            )
+    
+    def object_passes_test(self, parameter_name):
+        self.ioprocessor.verify(
+            iovalue=object(),
+            **{parameter_name: object}
+            )
+    
+    def test_required_passes(self):
+        self.object_passes_test('required')
+    
+    def test_optional_passes(self):
+        self.object_passes_test('optional')
+    
+    def object_raises_test(self, parameter_name):
+        with pytest.raises(VerificationFailureError):
+            self.ioprocessor.verify(
+                iovalue=object(),
+                **{parameter_name: self.CustomType}
+                )
+    
+    def test_required_raises(self):
+        self.object_raises_test('required')
+    
+    def test_optional_raises(self):
+        self.object_raises_test('optional')
+    
+    def none_value_passes_test(self, parameter_name):
+        self.ioprocessor.verify(
+            iovalue=None,
+            **{parameter_name: object}
+            )
+    
+    def test_required_none_value_passes(self):
+        self.none_value_passes_test('required')
+    
+    def test_optional_none_value_passes(self):
+        self.none_value_passes_test('optional')
+    
+    def test_required_overrides_optional(self):
+        self.ioprocessor.verify(
+            iovalue=object(),
+            required=object,
+            optional=self.CustomType,
+            )
+    
+    def unlimited_ignored_test(self, parameter_name):
+        """ When using non-container 'iovalue' and 'iospec' values, the
+            'unlimited' parameter is ignored. 'unlimited' only applies to 'dict'
+            and 'list' iospecs. """
+        with pytest.raises(VerificationFailureError):
+            self.ioprocessor.verify(
+                iovalue=object(),
+                unlimited=True,
+                **{parameter_name: self.CustomType}
+                )
+    
+    def test_required_unlimited_ignored(self):
+        self.unlimited_ignored_test('required')
+    
+    def test_optional_unlimited_ignored(self):
+        self.unlimited_ignored_test('optional')
+
+class TestNonContainerIOValueCoerce(unittest.TestCase):
+    def setUp(self):
+        self.ioprocessor = IOProcessor()
+    
+    def test_no_iospec_passes(self):
+        self.ioprocessor.coerce(
+            iovalue=object()
+            )
+    
+    def coercion_test(self, parameter_name):
+        class BeforeCoercionType(object):
+            pass
+        
+        class YesCoercionType(object):
+            pass
+        
+        def coerce_custom(value):
+            if isinstance(value, BeforeCoercionType):
+                return YesCoercionType()
+            return value
+        
+        ioprocessor = IOProcessor(
+            coercion_functions={YesCoercionType: coerce_custom}
+            )
+        
+        result = ioprocessor.coerce(
+            iovalue=BeforeCoercionType(),
+            **{parameter_name: YesCoercionType}
+            )
+        
+        assert isinstance(result, YesCoercionType)
+    
+    def test_coercion_required(self):
+        self.coercion_test('required')
+    
+    def test_coercion_optional(self):
+        self.coercion_test('optional')
+    
+
+
+
 # ---------------------- Dictionary keys checking ----------------------
 
 class VerificationTest(unittest.TestCase):
@@ -556,7 +674,7 @@ class TestTypeCheckingBasic(TypeCheckingTest):
         
         ioprocessor = IOProcessor()
         ioprocessor.verify(
-            iovals={'a': value},
+            iovalue={'a': value},
             **{iospec_kind: {'a': expected_type}}
             )
     
@@ -611,7 +729,7 @@ class TypeCheckingExtendedTest(object):
             }
         
         ioprocessor.verify(
-            iovals=iovals,
+            iovalue=iovals,
             required=required
             )
     
@@ -650,7 +768,7 @@ class TestTypeCheckingCustomFunction(TypeCheckingTest):
             typecheck_functions={self.CustomType: custom_function}
             )
         ioprocessor.verify(
-            iovals={'a': value},
+            iovalue={'a': value},
             required={'a': self.CustomType}
             )
     
@@ -806,11 +924,11 @@ class TestTypeCoercionOther(TypeCoercionTest):
         """ For this test case, no coercion functions are assigned. """
         return {}
     
-    def coercion_test(self, type_obj, iovalue, expected):
+    def coercion_test(self, type_obj, value, expected):
         iospecs = {
             'required': {'a': type_obj}
             }
-        iovals = {'a': iovalue}
+        iovals = {'a': value}
         
         result = self.get_result_value('a', iospecs=iospecs, iovals=iovals)
         
@@ -836,10 +954,10 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
         """ This class is used to test a coercion function's effect upon an
             arbitrarily-typed value. """
     
-    def coercion_test(self, type_obj, iovalue, expected):
+    def coercion_test(self, type_obj, value, expected):
         coercion_function = self.coercion_functions[type_obj]
         
-        result = coercion_function(iovalue)
+        result = coercion_function(value)
         assert result == expected
     
     def arbitrary_value_test(self, type_obj):
@@ -851,7 +969,7 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
 
 class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     """ Confirm that input values coerce correctly. """
-    coercion_functions = iomanager.default_input_coercion_functions
+    coercion_functions = iomanager.json_tools.input_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -880,7 +998,7 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
         dt_string = dt_value.isoformat()
         self.coercion_test(
             datetime.datetime,
-            iovalue=dt_string,
+            value=dt_string,
             expected=dt_value,
             )
     
@@ -892,7 +1010,7 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
         uuid_string = str(uuid_value)
         self.coercion_test(
             uuid.UUID,
-            iovalue=uuid_string,
+            value=uuid_string,
             expected=uuid_value,
             )
     
@@ -906,7 +1024,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         
         On output, some value types are coerced to string values by default.
         This is done with JSON-serialization in mind. """
-    coercion_functions = iomanager.default_output_coercion_functions
+    coercion_functions = iomanager.json_tools.output_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -924,7 +1042,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         dt_string = dt_value.isoformat()
         self.coercion_test(
             datetime.datetime,
-            iovalue=dt_value,
+            value=dt_value,
             expected=dt_string,
             )
     
@@ -940,7 +1058,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         uuid_string = str(uuid_value)
         self.coercion_test(
             uuid.UUID,
-            iovalue=uuid_value,
+            value=uuid_value,
             expected=uuid_string,
             )
 
@@ -951,18 +1069,18 @@ class TestTypeCoercionCycle(unittest.TestCase):
         result is equal to the starting value. """
     
     def coercion_cycle_test(self, type_obj, starting_value):
-        output_processor = iomanager.default_output_processor()
-        input_processor = iomanager.default_input_processor()
+        output_processor = iomanager.json_tools.output_processor()
+        input_processor = iomanager.json_tools.input_processor()
         
         iospec =  {'value': type_obj}
         
         output_result = output_processor.coerce(
-            iovals={'value': starting_value},
+            iovalue={'value': starting_value},
             required=iospec,
             )
         
         final_result = input_processor.coerce(
-            iovals=output_result,
+            iovalue=output_result,
             required=iospec,
             )
         
@@ -1153,7 +1271,7 @@ class TestIOManagerMethods(unittest.TestCase):
     def method_test(self, method_name):
         iomanager = IOManager()
         method_callable = getattr(iomanager, method_name)
-        method_callable(iovals={})
+        method_callable(iovalue={})
     
     def test_coerce_input(self):
         self.method_test('coerce_input')

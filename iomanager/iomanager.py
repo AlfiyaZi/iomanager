@@ -1,10 +1,6 @@
 """ Copyright (c) 2013 Josh Matthias <python.iomanager@gmail.com> """
 
-import datetime
-import dateutil.parser
-import decimal
 import inspect
-import uuid
 
 """ Jargon:
     'ioval' --> 'Input/Output value'
@@ -17,10 +13,11 @@ class Error(Exception):
     """ Base class for errors. """
 
 class VerificationFailureError(Error):
-    """ The 'iovals_dict' value submitted for processing did not conform to the
-        provided 'iospec' values. """
-    def __init__(self, error_msg):
-        self.error_msg = error_msg
+    """ The 'iovalue' value submitted for processing did not conform to the
+        provided 'iospec' value. """
+    def __init__(self, *pargs, **kwargs):
+        self.error_msg = pargs[0]
+        super(VerificationFailureError, self).__init__(*pargs, **kwargs)
 
 class WrongTypeError(Error):
     """ An 'ioval' value could not be coerced to the expected type.
@@ -128,70 +125,15 @@ class TypeNameRepresentation(object):
     """ Used to generate error output. Replaces quotation marks arount type
         object .__name__ values. """
     def __init__(self, type_obj):
-        self.type_name = type_obj.__name__
+        if type_obj is None:
+            self.type_name = 'None'
+        else:
+            self.type_name = type_obj.__name__
     
     def __repr__(self):
         result = self.type_name.strip("'").strip('"')
         result = '<{}>'.format(result)
         return result
-
-def coerce_unicode_input(value):
-    if not isinstance(value, str):
-        return value
-    
-    return unicode(value)
-
-def coerce_decimal_input(value):
-    if not isinstance(value, int):
-        return value
-    
-    return decimal.Decimal(value)
-
-def coerce_uuid_input(value):
-    if not isinstance(value, basestring):
-        return value
-    
-    try:
-        return uuid.UUID(value)
-    except ValueError:
-        pass
-    
-    return value
-
-def coerce_datetime_input(value):
-    if not isinstance(value, basestring):
-        return value
-    
-    try:
-        return dateutil.parser.parse(value)
-    except ValueError:
-        pass
-    
-    return value
-
-default_input_coercion_functions = {
-    unicode: coerce_unicode_input,
-    decimal.Decimal: coerce_decimal_input,
-    uuid.UUID: coerce_uuid_input,
-    datetime.datetime: coerce_datetime_input,
-    }
-
-def coerce_uuid_output(value):
-    if not isinstance(value, uuid.UUID):
-        return value
-    
-    return str(value)
-
-def coerce_datetime_output(value):
-    if not isinstance(value, datetime.datetime):
-        return value
-    
-    return value.isoformat()
-
-default_output_coercion_functions = {
-    uuid.UUID: coerce_uuid_output,
-    datetime.datetime: coerce_datetime_output,
-    }
 
 
 
@@ -208,65 +150,47 @@ class IOProcessor(object):
     
     def verify(
         self,
-        iovals,
-        required={},
-        optional={},
+        iovalue,
+        required=NotProvided,
+        optional=NotProvided,
         unlimited=False,
         ):
-        iovals_dict = iovals.copy()
-        required_iospec = required.copy()
-        optional_iospec = optional.copy()
-        
+        required_iospec = required
+        optional_iospec = optional
         combined_iospec = combine_iospecs(required_iospec, optional_iospec)
         
-        missing = self.difference_dict(
-            required_iospec,
-            iovals_dict,
-            )
-        if missing is NoDifference:
-            missing = {}
+        missing = self.difference_ioval(required_iospec, iovalue)
+        unknown = self.difference_ioval(iovalue, combined_iospec)
         
-        if unlimited:
-            """ When 'unlimited=True', only top-level keys are unlimited.
-                Verification still occurs recursively for keys specified in the
-                'combined_iospec'. """
-            possibly_unknown_keys = (
-                set(iovals_dict.keys()) & set(combined_iospec.keys())
-                )
-            possibly_unknown_iovals = {
-                ikey: ivalue
-                for ikey, ivalue
-                in iovals_dict.items()
-                if ikey in possibly_unknown_keys
-                }
-        else:
-            possibly_unknown_iovals = iovals_dict
-        
-        unknown = self.difference_dict(
-            possibly_unknown_iovals,
-            combined_iospec,
-            result_modifier=modify_unknown_result
-            )
-        if unknown is NoDifference:
-            unknown = {}
+        if unlimited and all_are_instances((unknown, combined_iospec), dict):
+            """ When unlimited=True, top-level keys are unlimited. """
+            for ikey in unknown.keys():
+                if ikey not in combined_iospec:
+                    del unknown[ikey]
+            if not unknown:
+                unknown = NoDifference
         
         try:
-            self.confirm_type_dict(iovals_dict, combined_iospec)
+            self.confirm_type_ioval(iovalue, combined_iospec)
         except WrongTypeError as exc:
             wrong_types = exc.failure_result
         else:
-            wrong_types = {}
+            wrong_types = None
         
-        if not (missing or unknown or wrong_types):
+        if (
+            missing is NoDifference and
+            unknown is NoDifference and
+            wrong_types is None
+            ):
+            # Verification passes.
             return
         
-        missing_output = make_missing_output(missing)
-        
+        # Verification fails.
         err_msg_parts = [
             caption_part + str(output_part)
             for caption_part, output_part in
             [
-                ('Missing: ', missing_output),
+                ('Missing: ', make_missing_output(missing)),
                 ('Not allowed: ', unknown),
                 ('Wrong type: ', wrong_types),
                 ]
@@ -324,6 +248,9 @@ class IOProcessor(object):
         return self.difference_dict(dict_a, dict_b, *pargs, **kwargs)
     
     def confirm_type_ioval(self, ioval, expected_type, nonetype_ok=True):
+        if expected_type is NotProvided:
+            expected_type = AnyType
+        
         # Verify container types.
         if isinstance(expected_type, dict):
             self.confirm_type_dict(ioval, expected_type)
@@ -391,16 +318,16 @@ class IOProcessor(object):
     
     def coerce(
         self,
-        iovals,
-        required={},
-        optional={},
+        iovalue,
+        required=NotProvided,
+        optional=NotProvided,
         ):
-        iovals_dict = iovals.copy()
-        required_iospec = required.copy()
-        optional_iospec = optional.copy()
+        required_iospec = required
+        optional_iospec = optional
+        
         combined_iospec = combine_iospecs(required_iospec, optional_iospec)
         
-        return self.coerce_dict(iovals_dict, combined_iospec)
+        return self.coerce_ioval(iovalue, combined_iospec)
     
     def coerce_ioval(self, ioval, expected_type, nonetype_ok=True):
         # Coerce container types.
@@ -496,7 +423,7 @@ class IOManager(object):
     
     def process_input(
         self,
-        iovals,
+        iovalue,
         required={},
         optional={},
         unlimited=False,
@@ -504,14 +431,14 @@ class IOManager(object):
         """ coerce(), then verify(). """
         ioprocessor = self.make_ioprocessor('input')
         
-        coerced_iovals = ioprocessor.coerce(iovals, required, optional)
+        coerced_iovals = ioprocessor.coerce(iovalue, required, optional)
         ioprocessor.verify(coerced_iovals, required, optional, unlimited)
         
         return coerced_iovals
     
     def process_output(
         self,
-        iovals,
+        iovalue,
         required={},
         optional={},
         unlimited=False,
@@ -519,8 +446,8 @@ class IOManager(object):
         """ verify(), then coerce(). """
         ioprocessor = self.make_ioprocessor('output')
         
-        ioprocessor.verify(iovals, required, optional, unlimited)
-        coerced_iovals = ioprocessor.coerce(iovals, required, optional)
+        ioprocessor.verify(iovalue, required, optional, unlimited)
+        coerced_iovals = ioprocessor.coerce(iovalue, required, optional)
         
         return coerced_iovals
     
@@ -539,18 +466,6 @@ class IOManager(object):
     def verify_output(self, *pargs, **kwargs):
         ioprocessor = self.make_ioprocessor('output')
         return ioprocessor.verify(*pargs, **kwargs)
-
-def default_input_processor():
-    return IOProcessor(coercion_functions=default_input_coercion_functions)
-
-def default_output_processor():
-    return IOProcessor(coercion_functions=default_output_coercion_functions)
-
-def default_iomanager():
-    return IOManager(
-        input_coercion_functions=default_input_coercion_functions,
-        output_coercion_functions=default_output_coercion_functions,
-        )
 
 
 
@@ -600,36 +515,41 @@ def all_are_instances(items, type_objs):
     
     return True
 
-def combine_iospecs(iospec_a, iospec_b):
-    result = {}
-    keys_a = set(iospec_a.keys())
-    keys_b = set(iospec_b.keys())
-    all_keys = keys_a | keys_b
+def combine_iospecs(iospec_a=NotProvided, iospec_b=NotProvided):
+    if all_are_instances((iospec_a, iospec_b), dict):
+        return combine_iospecs_dict(iospec_a, iospec_b)
     
-    for key in keys_a & keys_b:
-        if (
-            isinstance(iospec_a[key], dict) and
-            isinstance(iospec_b[key], dict)
-            ):
-            result[key] = combine_iospecs(iospec_a[key], iospec_b[key])
-            all_keys.remove(key)
-    
-    for key in all_keys:
-        result[key] = iospec_a.get(key, iospec_b.get(key))
-    
-    return result
+    if iospec_a is NotProvided:
+        if iospec_b is NotProvided:
+            return AnyType
+        return iospec_b
+    return iospec_a
 
-def make_missing_output(missing_iospec):
-    result = {}
+def combine_iospecs_dict(iospec_a, iospec_b):
+    all_keys = set(iospec_a.keys()) | set(iospec_b.keys())
     
-    for key, value in missing_iospec.items():
-        if isinstance(value, dict):
-            result[key] = make_missing_output(value)
-            continue
-        
-        result[key] = TypeNameRepresentation(value)
+    return {
+        ikey: combine_iospecs(
+            iospec_a.get(ikey, NotProvided),
+            iospec_b.get(ikey, NotProvided),
+            )
+        for ikey in all_keys
+        }
+
+def make_missing_output(iospec):
+    if iospec is NoDifference:
+        return None
     
-    return result
+    if isinstance(iospec, dict):
+        return make_missing_output_dict(iospec)
+    
+    return TypeNameRepresentation(iospec)
+
+def make_missing_output_dict(iospec):
+    return {
+        ikey: make_missing_output(ivalue)
+        for ikey, ivalue in iospec.iteritems()
+        }
 
 
 
