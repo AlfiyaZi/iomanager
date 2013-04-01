@@ -26,6 +26,23 @@ class ConfirmationError(Error):
     """ Raised to confirm that a particular function or method has been
         called. """
 
+class CoercionTest(unittest.TestCase):
+    class BeforeCoercionType(object):
+        """ A type that coerces to YesCoercionType. """
+    
+    class YesCoercionType(object):
+        """ A type with a custom coercion function. """
+    
+    def coerce_custom(self, value):
+        if isinstance(value, self.BeforeCoercionType):
+            return self.YesCoercionType()
+        return value
+    
+    def setUp(self):
+        self.ioprocessor = IOProcessor(
+            coercion_functions={self.YesCoercionType: self.coerce_custom}
+            )
+
 
 
 # ------------------- Non-container 'iovalue' tests --------------------
@@ -103,44 +120,223 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
     def test_optional_unlimited_ignored(self):
         self.unlimited_ignored_test('optional')
 
-class TestNonContainerIOValueCoerce(unittest.TestCase):
-    def setUp(self):
-        self.ioprocessor = IOProcessor()
-    
+class TestNonContainerIOValueCoerce(CoercionTest):
     def test_no_iospec_passes(self):
         self.ioprocessor.coerce(
             iovalue=object()
             )
     
+    def no_coercion_test(self, parameter_name):
+        uncoerced_value = self.BeforeCoercionType()
+        
+        result = self.ioprocessor.coerce(
+            iovalue=uncoerced_value,
+            **{parameter_name: object}
+            )
+        
+        assert result is uncoerced_value
+    
+    def test_no_coercion_required(self):
+        self.no_coercion_test('required')
+    
+    def test_no_coercion_optional(self):
+        self.no_coercion_test('optional')
+    
+    def yes_coercion_test(self, parameter_name):
+        result = self.ioprocessor.coerce(
+            iovalue=self.BeforeCoercionType(),
+            **{parameter_name: self.YesCoercionType}
+            )
+        
+        assert isinstance(result, self.YesCoercionType)
+    
+    def test_yes_coercion_required(self):
+        self.yes_coercion_test('required')
+    
+    def test_yes_coercion_optional(self):
+        self.yes_coercion_test('optional')
+    
+    def test_required_overrides_optional(self):
+        uncoerced_value = self.BeforeCoercionType()
+        
+        result = self.ioprocessor.coerce(
+            iovalue=uncoerced_value,
+            required=object,
+            optional=self.YesCoercionType,
+            )
+        
+        assert result is uncoerced_value
+
+
+
+# ---------------------- List-value IOSpec tests -----------------------
+
+@pytest.mark.a
+class TestIOSpecListVerify(unittest.TestCase):
+    def setUp(self):
+        self.ioprocessor = IOProcessor()
+    
+    def parameter_test(self, parameter_name, iovalue):
+        self.ioprocessor.verify(
+            iovalue=iovalue,
+            **{parameter_name: [object]}
+            )
+    
+    def good_iovalue_passes_test(self, parameter_name):
+        self.parameter_test(parameter_name, [object()])
+    
+    def test_required_passes(self):
+        self.good_iovalue_passes_test('required')
+    
+    def test_optional_passes(self):
+        self.good_iovalue_passes_test('optional')
+    
+    def test_tuple_passes(self):
+        """ Confirm that tuples are treated the same as lists. """
+        self.parameter_test(
+            'required',
+            (object(), )
+            )
+    
+    def extra_item_raises_test(self, parameter_name):
+        with pytest.raises(VerificationFailureError):
+            self.parameter_test(parameter_name, [object(), object()])
+    
+    def test_extra_item_raises_required(self):
+        self.extra_item_raises_test('required')
+    
+    def test_extra_item_raises_optional(self):
+        self.extra_item_raises_test('optional')
+    
+    def missing_item_test(self, parameter_name):
+        self.parameter_test(parameter_name, [])
+    
+    def test_missing_item_raises_required(self):
+        with pytest.raises(VerificationFailureError):
+            self.missing_item_test('required')
+    
+    def test_missing_item_passes_optional(self):
+        self.missing_item_test('optional')
+    
+    def none_value_test(self, parameter_name):
+        self.parameter_test(parameter_name, [None])
+    
+    def test_none_value_passes_required(self):
+        self.none_value_test('required')
+    
+    def test_none_value_passes_optional(self):
+        self.none_value_test('optional')
+    
+    def unlimited_test(self, parameter_name):
+        self.ioprocessor.verify(
+            iovalue=[object()],
+            unlimited=True,
+            **{parameter_name: []}
+            )
+    
+    def test_unlimited_required(self):
+        self.unlimited_test('required')
+    
+    def test_unlimited_optional(self):
+        self.unlimited_test('optional')
+
+@pytest.mark.a
+class TestIOSpecListCoerce(CoercionTest):
     def coercion_test(self, parameter_name):
-        class BeforeCoercionType(object):
-            pass
-        
-        class YesCoercionType(object):
-            pass
-        
-        def coerce_custom(value):
-            if isinstance(value, BeforeCoercionType):
-                return YesCoercionType()
-            return value
-        
-        ioprocessor = IOProcessor(
-            coercion_functions={YesCoercionType: coerce_custom}
+        result_list = self.ioprocessor.coerce(
+            iovalue=[self.BeforeCoercionType()],
+            **{parameter_name: self.YesCoercionType}
             )
+        result = result_list[0]
         
-        result = ioprocessor.coerce(
-            iovalue=BeforeCoercionType(),
-            **{parameter_name: YesCoercionType}
-            )
-        
-        assert isinstance(result, YesCoercionType)
+        assert isinstance(result, self.YesCoercionType)
     
     def test_coercion_required(self):
         self.coercion_test('required')
     
     def test_coercion_optional(self):
         self.coercion_test('optional')
+
+@pytest.mark.a
+class TestIOSpecListVerifyNested(unittest.TestCase):
+    """ Confirm that nested container types behave as expected. """
+    def make_nested_iospec(self, iospec):
+        return [iospec]
     
+    def make_nested_iovalue(self, value):
+        return [value]
+    
+    def iospec_test(self, parameter_name, iovalue, iospec):
+        IOProcessor().verify(
+            iovalue=self.make_nested_iovalue(iovalue),
+            **{parameter_name: self.make_nested_iospec(iospec)}
+            )
+    
+    # ----------------------- Nested list tests ------------------------
+    
+    def list_passes_test(self, parameter_name, iovalue):
+        self.iospec_test(parameter_name, iovalue, [object])
+    
+    def list_expected_passes_test(self, parameter_name):
+        self.list_passes_test(parameter_name, [object()])
+    
+    def test_list_expected_passes_required(self):
+        self.list_expected_passes_test('required')
+    
+    def test_list_expected_passes_optional(self):
+        self.list_expected_passes_test('optional')
+    
+    def test_list_missing_item_passes_optional(self):
+        self.list_passes_test('optional', [])
+    
+    def list_raises_test(self, *pargs, **kwargs):
+        with pytest.raises(VerificationFailureError):
+            self.list_passes_test(*pargs, **kwargs)
+    
+    def list_extra_item_raises_test(self, parameter_name):
+        self.list_raises_test(parameter_name, [object(), object()])
+    
+    def test_list_extra_item_raises_required(self):
+        self.list_extra_item_raises_test('required')
+    
+    def test_list_extra_item_raises_optional(self):
+        self.list_extra_item_raises_test('optional')
+    
+    def test_list_missing_item_raises_required(self):
+        self.list_raises_test('required', [])
+    
+    # ----------------------- Nested dict tests ------------------------
+    
+    def dict_passes_test(self, parameter_name, iovalue):
+        self.iospec_test(parameter_name, iovalue, {'a': object})
+    
+    def dict_expected_passes_test(self, parameter_name):
+        self.dict_passes_test(parameter_name, {'a': object()})
+    
+    def test_dict_expected_passes_required(self):
+        self.dict_expected_passes_test('required')
+    
+    def test_dict_expected_passes_optional(self):
+        self.dict_expected_passes_test('optional')
+    
+    def test_dict_missing_item_passes_optional(self):
+        self.dict_passes_test('optional', {})
+    
+    def dict_raises_test(self, *pargs, **kwargs):
+        with pytest.raises(VerificationFailureError):
+            self.dict_passes_test(*pargs, **kwargs)
+    
+    def dict_extra_item_raises_test(self, parameter_name):
+        self.dict_raises_test(parameter_name, {'a': object(), 'b': object()})
+    
+    def test_dict_extra_item_raises_required(self):
+        self.dict_extra_item_raises_test('required')
+    
+    def test_dict_extra_item_raises_optional(self):
+        self.dict_extra_item_raises_test('optional')
+    
+    def test_dict_missing_item_raises_required(self):
+        self.dict_raises_test('required', {})
 
 
 
@@ -638,12 +834,6 @@ class TestStructuredDictRequiredOverridesOptional(VerificationTest):
         iovals = self.all_iovals()
         del iovals['c']['r']
         self.bad_iovals_test(iovals)
-
-
-
-# ----------------------- Structured-list tests ------------------------
-
-# Structured lists are a planned future feature.
 
 
 
