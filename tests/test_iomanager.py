@@ -107,6 +107,9 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
 
 @pytest.mark.a
 class TestNonContainerIOValueCoerce(unittest.TestCase):
+    def setUp(self):
+        self.ioprocessor = IOProcessor()
+    
     def test_no_iospec_raises(self):
         with pytest.raises(TypeError):
             self.ioprocessor.coerce(

@@ -216,7 +216,7 @@ class IOProcessor(object):
         ):
         if required is NotProvided and optional is NotProvided:
             raise TypeError(
-                " Either 'required' or 'optional' (or both) must be provided. "
+                "Either 'required' or 'optional' (or both) must be provided."
                 )
         
         required_iospec = required
@@ -369,15 +369,20 @@ class IOProcessor(object):
     def coerce(
         self,
         iovalue,
-        required={},
-        optional={},
+        required=NotProvided,
+        optional=NotProvided,
         ):
-        iovals_dict = iovalue.copy()
-        required_iospec = required.copy()
-        optional_iospec = optional.copy()
+        if required is NotProvided and optional is NotProvided:
+            raise TypeError(
+                "Either 'required' or 'optional' (or both) must be provided."
+                )
+        
+        required_iospec = required
+        optional_iospec = optional
+        
         combined_iospec = combine_iospecs(required_iospec, optional_iospec)
         
-        return self.coerce_dict(iovals_dict, combined_iospec)
+        return self.coerce_ioval(iovalue, combined_iospec)
     
     def coerce_ioval(self, ioval, expected_type, nonetype_ok=True):
         # Coerce container types.
