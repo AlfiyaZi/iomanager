@@ -129,7 +129,10 @@ class TypeNameRepresentation(object):
     """ Used to generate error output. Replaces quotation marks arount type
         object .__name__ values. """
     def __init__(self, type_obj):
-        self.type_name = type_obj.__name__
+        if type_obj is None:
+            self.type_name = 'None'
+        else:
+            self.type_name = type_obj.__name__
     
     def __repr__(self):
         result = self.type_name.strip("'").strip('"')
@@ -221,29 +224,33 @@ class IOProcessor(object):
         
         required_iospec = required
         optional_iospec = optional
-        
         combined_iospec = combine_iospecs(required_iospec, optional_iospec)
         
-        missing = {}
-        unknown = {}
+        missing = self.difference_ioval(required_iospec, iovalue)
+        
+        unknown = self.difference_ioval(iovalue, combined_iospec)
         
         try:
             self.confirm_type_ioval(iovalue, combined_iospec)
         except WrongTypeError as exc:
             wrong_types = exc.failure_result
         else:
-            wrong_types = {}
+            wrong_types = None
         
-        if not (missing or unknown or wrong_types):
+        if (
+            missing is NoDifference and
+            unknown is NoDifference and
+            wrong_types is None
+            ):
+            # Verification passes.
             return
         
-        missing_output = make_missing_output(missing)
-        
+        # Verification fails.
         err_msg_parts = [
             caption_part + str(output_part)
             for caption_part, output_part in
             [
-                ('Missing: ', missing_output),
+                ('Missing: ', make_missing_output(missing)),
                 ('Not allowed: ', unknown),
                 ('Wrong type: ', wrong_types),
                 ]
@@ -601,17 +608,20 @@ def combine_iospecs_dict(iospec_a, iospec_b):
         for ikey in all_keys
         }
 
-def make_missing_output(missing_iospec):
-    result = {}
+def make_missing_output(iospec):
+    if iospec is NoDifference:
+        return None
     
-    for key, value in missing_iospec.items():
-        if isinstance(value, dict):
-            result[key] = make_missing_output(value)
-            continue
-        
-        result[key] = TypeNameRepresentation(value)
+    if isinstance(iospec, dict):
+        return make_missing_output_dict(iospec)
     
-    return result
+    return TypeNameRepresentation(iospec)
+
+def make_missing_output_dict(iospec):
+    return {
+        ikey: make_missing_output(ivalue)
+        for ikey, ivalue in iospec.iteritems()
+        }
 
 
 
