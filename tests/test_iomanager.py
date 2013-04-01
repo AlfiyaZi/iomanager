@@ -66,7 +66,7 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
     def none_value_passes_test(self, parameter_name):
         self.ioprocessor.verify(
             iovalue=None,
-            **{parameter_name: None}
+            **{parameter_name: object}
             )
     
     def test_required_none_value_passes(self):

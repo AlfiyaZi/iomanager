@@ -210,8 +210,8 @@ class IOProcessor(object):
     def verify(
         self,
         iovalue,
-        required={},
-        optional={},
+        required=NotProvided,
+        optional=NotProvided,
         unlimited=False,
         ):
         required_iospec = required
@@ -223,7 +223,7 @@ class IOProcessor(object):
         unknown = {}
         
         try:
-            self.confirm_type_dict(iovalue, combined_iospec)
+            self.confirm_type_ioval(iovalue, combined_iospec)
         except WrongTypeError as exc:
             wrong_types = exc.failure_result
         else:
