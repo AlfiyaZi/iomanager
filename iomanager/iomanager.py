@@ -19,6 +19,8 @@ class Error(Exception):
 class VerificationFailureError(Error):
     """ The 'iovals_dict' value submitted for processing did not conform to the
         provided 'iospec' values. """
+    def __init__(self, error_msg):
+        self.error_msg = error_msg
 
 class WrongTypeError(Error):
     """ An 'ioval' value could not be coerced to the expected type.
