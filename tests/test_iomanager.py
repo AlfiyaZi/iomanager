@@ -26,6 +26,97 @@ class ConfirmationError(Error):
     """ Raised to confirm that a particular function or method has been
         called. """
 
+
+
+# ------------------- Non-container 'iovalue' tests --------------------
+
+@pytest.mark.b
+class TestNonContainerIOValueVerify(unittest.TestCase):
+    class CustomType(object):
+        """ A custom type for testing. """
+    
+    def setUp(self):
+        self.ioprocessor = IOProcessor()
+    
+    def object_passes_test(self, parameter_name):
+        self.ioprocessor.verify(
+            iovalue=object(),
+            **{parameter_name: object}
+            )
+    
+    def test_required_passes(self):
+        self.object_passes_test('required')
+    
+    def test_optional_passes(self):
+        self.object_passes_test('optional')
+    
+    def object_raises_test(self, parameter_name):
+        with pytest.raises(VerificationFailureError):
+            self.ioprocessor.verify(
+                iovalue=object(),
+                **{parameter_name: self.CustomType}
+                )
+    
+    def test_required_raises(self):
+        self.object_raises_test('required')
+    
+    def test_optional_raises(self):
+        self.object_raises_test('optional')
+    
+    def none_value_passes_test(self, parameter_name):
+        self.ioprocessor.verify(
+            iovalue=None,
+            **{parameter_name: None}
+            )
+    
+    def test_required_none_value_passes(self):
+        self.none_value_passes_test('required')
+    
+    def test_optional_none_value_passes(self):
+        self.none_value_passes_test('optional')
+    
+    def test_required_overrides_optional(self):
+        self.ioprocessor.verify(
+            iovalue=object(),
+            required=object,
+            optional=self.CustomType,
+            )
+
+@pytest.mark.a
+class TestNonContainerIOValueCoerce(unittest.TestCase):
+    
+    def coercion_test(self, parameter_name):
+        class BeforeCoercionType(object):
+            pass
+        
+        class YesCoercionType(object):
+            pass
+        
+        def coerce_custom(value):
+            if isinstance(value, BeforeCoercionType):
+                return YesCoercionType()
+            return value
+        
+        ioprocessor = IOProcessor(
+            coercion_functions={YesCoercionType: coerce_custom}
+            )
+        
+        result = ioprocessor.coerce(
+            iovalue=BeforeCoercionType(),
+            **{parameter_name: YesCoercionType}
+            )
+        
+        assert isinstance(result, YesCoercionType)
+    
+    def test_coercion_required(self):
+        self.coercion_test('required')
+    
+    def test_coercion_optional(self):
+        self.coercion_test('optional')
+    
+
+
+
 # ---------------------- Dictionary keys checking ----------------------
 
 class VerificationTest(unittest.TestCase):
