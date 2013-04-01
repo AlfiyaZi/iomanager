@@ -37,7 +37,6 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
     def setUp(self):
         self.ioprocessor = IOProcessor()
     
-    @pytest.mark.a
     def test_no_iospec_passes(self):
         self.ioprocessor.verify(
             iovalue=object()
@@ -108,7 +107,6 @@ class TestNonContainerIOValueCoerce(unittest.TestCase):
     def setUp(self):
         self.ioprocessor = IOProcessor()
     
-    @pytest.mark.a
     def test_no_iospec_passes(self):
         self.ioprocessor.coerce(
             iovalue=object()

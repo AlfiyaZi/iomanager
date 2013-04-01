@@ -217,11 +217,6 @@ class IOProcessor(object):
         optional=NotProvided,
         unlimited=False,
         ):
-        if required is NotProvided and optional is NotProvided:
-            raise TypeError(
-                "Either 'required' or 'optional' (or both) must be provided."
-                )
-        
         required_iospec = required
         optional_iospec = optional
         combined_iospec = combine_iospecs(required_iospec, optional_iospec)
@@ -315,6 +310,9 @@ class IOProcessor(object):
         return self.difference_dict(dict_a, dict_b, *pargs, **kwargs)
     
     def confirm_type_ioval(self, ioval, expected_type, nonetype_ok=True):
+        if expected_type is NotProvided:
+            expected_type = AnyType
+        
         # Verify container types.
         if isinstance(expected_type, dict):
             self.confirm_type_dict(ioval, expected_type)
@@ -386,11 +384,6 @@ class IOProcessor(object):
         required=NotProvided,
         optional=NotProvided,
         ):
-        if required is NotProvided and optional is NotProvided:
-            raise TypeError(
-                "Either 'required' or 'optional' (or both) must be provided."
-                )
-        
         required_iospec = required
         optional_iospec = optional
         
@@ -601,6 +594,8 @@ def combine_iospecs(iospec_a=NotProvided, iospec_b=NotProvided):
         return combine_iospecs_dict(iospec_a, iospec_b)
     
     if iospec_a is NotProvided:
+        if iospec_b is NotProvided:
+            return AnyType
         return iospec_b
     return iospec_a
 
