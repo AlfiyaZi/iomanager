@@ -969,7 +969,7 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
 
 class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     """ Confirm that input values coerce correctly. """
-    coercion_functions = iomanager.default_input_coercion_functions
+    coercion_functions = iomanager.json_tools.input_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -1024,7 +1024,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         
         On output, some value types are coerced to string values by default.
         This is done with JSON-serialization in mind. """
-    coercion_functions = iomanager.default_output_coercion_functions
+    coercion_functions = iomanager.json_tools.output_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -1069,8 +1069,8 @@ class TestTypeCoercionCycle(unittest.TestCase):
         result is equal to the starting value. """
     
     def coercion_cycle_test(self, type_obj, starting_value):
-        output_processor = iomanager.default_output_processor()
-        input_processor = iomanager.default_input_processor()
+        output_processor = iomanager.json_tools.output_processor()
+        input_processor = iomanager.json_tools.input_processor()
         
         iospec =  {'value': type_obj}
         

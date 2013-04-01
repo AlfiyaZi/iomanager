@@ -1,10 +1,6 @@
 """ Copyright (c) 2013 Josh Matthias <python.iomanager@gmail.com> """
 
-import datetime
-import dateutil.parser
-import decimal
 import inspect
-import uuid
 
 """ Jargon:
     'ioval' --> 'Input/Output value'
@@ -138,64 +134,6 @@ class TypeNameRepresentation(object):
         result = self.type_name.strip("'").strip('"')
         result = '<{}>'.format(result)
         return result
-
-def coerce_unicode_input(value):
-    if not isinstance(value, str):
-        return value
-    
-    return unicode(value)
-
-def coerce_decimal_input(value):
-    if not isinstance(value, int):
-        return value
-    
-    return decimal.Decimal(value)
-
-def coerce_uuid_input(value):
-    if not isinstance(value, basestring):
-        return value
-    
-    try:
-        return uuid.UUID(value)
-    except ValueError:
-        pass
-    
-    return value
-
-def coerce_datetime_input(value):
-    if not isinstance(value, basestring):
-        return value
-    
-    try:
-        return dateutil.parser.parse(value)
-    except ValueError:
-        pass
-    
-    return value
-
-default_input_coercion_functions = {
-    unicode: coerce_unicode_input,
-    decimal.Decimal: coerce_decimal_input,
-    uuid.UUID: coerce_uuid_input,
-    datetime.datetime: coerce_datetime_input,
-    }
-
-def coerce_uuid_output(value):
-    if not isinstance(value, uuid.UUID):
-        return value
-    
-    return str(value)
-
-def coerce_datetime_output(value):
-    if not isinstance(value, datetime.datetime):
-        return value
-    
-    return value.isoformat()
-
-default_output_coercion_functions = {
-    uuid.UUID: coerce_uuid_output,
-    datetime.datetime: coerce_datetime_output,
-    }
 
 
 
@@ -528,18 +466,6 @@ class IOManager(object):
     def verify_output(self, *pargs, **kwargs):
         ioprocessor = self.make_ioprocessor('output')
         return ioprocessor.verify(*pargs, **kwargs)
-
-def default_input_processor():
-    return IOProcessor(coercion_functions=default_input_coercion_functions)
-
-def default_output_processor():
-    return IOProcessor(coercion_functions=default_output_coercion_functions)
-
-def default_iomanager():
-    return IOManager(
-        input_coercion_functions=default_input_coercion_functions,
-        output_coercion_functions=default_output_coercion_functions,
-        )
 
 
 

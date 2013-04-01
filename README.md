@@ -268,9 +268,9 @@ def handle_request(request):
 "But wait!" you're saying. "Using ```iomanager``` seems to require a lot more
 code. Why would I want to use so much more code to accomplish the same thing?"
 
-The answer is **consistency**. Without ```iomanager```, you must include
-these transformations in each API function definition, for each parameter that
-requires transformation. With ```iomanager```, you can specify your coercion
+The answer is **consistency and reusability**. Without ```iomanager```, you must
+include these transformations in each API function definition, for each parameter
+that requires transformation. With ```iomanager```, you can specify your coercion
 functions once, and re-use the same ```handle_request``` function for every API
 function. There is a bit more to it of course; for an example of how
 ```iomanager``` can be used with a web framework, see
@@ -285,12 +285,12 @@ from datetime import timedelta
 import dateutil.parser
 import json
 import webob
-from iomanager import json_iomanager
+import iomanager
 
 def api_method_nextweek(some_date):
     return some_date + timedelta(days=7)
 
-manager = json_iomanager()
+manager = iomanager.json_tools.io_manager()
 
 def handle_request(request):
     input_values = json.loads(request.body)
