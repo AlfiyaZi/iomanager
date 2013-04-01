@@ -30,7 +30,6 @@ class ConfirmationError(Error):
 
 # ------------------- Non-container 'iovalue' tests --------------------
 
-@pytest.mark.b
 class TestNonContainerIOValueVerify(unittest.TestCase):
     class CustomType(object):
         """ A custom type for testing. """
@@ -38,11 +37,11 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
     def setUp(self):
         self.ioprocessor = IOProcessor()
     
-    def test_no_iospec_raises(self):
-        with pytest.raises(TypeError):
-            self.ioprocessor.verify(
-                iovalue=None
-                )
+    @pytest.mark.a
+    def test_no_iospec_passes(self):
+        self.ioprocessor.verify(
+            iovalue=object()
+            )
     
     def object_passes_test(self, parameter_name):
         self.ioprocessor.verify(
@@ -105,16 +104,15 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
     def test_optional_unlimited_ignored(self):
         self.unlimited_ignored_test('optional')
 
-@pytest.mark.a
 class TestNonContainerIOValueCoerce(unittest.TestCase):
     def setUp(self):
         self.ioprocessor = IOProcessor()
     
-    def test_no_iospec_raises(self):
-        with pytest.raises(TypeError):
-            self.ioprocessor.coerce(
-                iovalue=None
-                )
+    @pytest.mark.a
+    def test_no_iospec_passes(self):
+        self.ioprocessor.coerce(
+            iovalue=object()
+            )
     
     def coercion_test(self, parameter_name):
         class BeforeCoercionType(object):
