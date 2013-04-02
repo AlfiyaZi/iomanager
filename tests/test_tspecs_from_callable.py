@@ -22,14 +22,14 @@ class ResultTest(object):
         
         IOProcessor().verify(iovals, **result)
 
-class TspecValueTest(unittest.TestCase):
+class IOSpecValueTest(unittest.TestCase):
     def iospec_value_test(self, iospec_name, expected_list):
         result = iospecs_from_callable(self.callable)
         expected = {ikey: AnyType for ikey in expected_list}
         assert result[iospec_name] == expected
     
 
-class TestParametersEmpty(TspecValueTest, ResultTest):
+class TestParametersEmpty(IOSpecValueTest, ResultTest):
     @property
     def callable(self):
         def callable_obj():
@@ -42,7 +42,7 @@ class TestParametersEmpty(TspecValueTest, ResultTest):
     def test_optional_iospec(self):
         self.iospec_value_test('optional', [])
 
-class TestParametersRequired(TspecValueTest, ResultTest):
+class TestParametersRequired(IOSpecValueTest, ResultTest):
     @property
     def callable(self):
         def callable_obj(a):
@@ -55,7 +55,7 @@ class TestParametersRequired(TspecValueTest, ResultTest):
     def test_optional_iospec(self):
         self.iospec_value_test('optional', [])
 
-class TestParametersOptional(TspecValueTest, ResultTest):
+class TestParametersOptional(IOSpecValueTest, ResultTest):
     @property
     def callable(self):
         def callable_obj(b=None):
@@ -68,7 +68,7 @@ class TestParametersOptional(TspecValueTest, ResultTest):
     def test_optional_iospec(self):
         self.iospec_value_test('optional', ['b'])
 
-class TestParametersBothRequiredAndOptional(TspecValueTest, ResultTest):
+class TestParametersBothRequiredAndOptional(IOSpecValueTest, ResultTest):
     @property
     def callable(self):
         def callable_obj(a, b=None):

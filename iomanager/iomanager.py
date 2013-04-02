@@ -162,13 +162,8 @@ class IOProcessor(object):
         missing = self.difference_ioval(required_iospec, iovalue)
         unknown = self.difference_ioval(iovalue, combined_iospec)
         
-        if unlimited and all_are_instances((unknown, combined_iospec), dict):
-            """ When unlimited=True, top-level keys are unlimited. """
-            for ikey in unknown.keys():
-                if ikey not in combined_iospec:
-                    del unknown[ikey]
-            if not unknown:
-                unknown = NoDifference
+        if unlimited:
+            unknown = self.filter_unlimited(unknown, combined_iospec)
         
         try:
             self.confirm_type_ioval(iovalue, combined_iospec)
@@ -237,15 +232,60 @@ class IOProcessor(object):
         
         return NoDifference
     
-    def difference_list(self, list_obj_a, list_obj_b, *pargs, **kwargs):
-        if isinstance(list_obj_a, list):
-            dict_a = make_dict_from_list(list_obj_a)
-            dict_b = list_obj_b.make_dict(len(list_obj_a))
+    def difference_list(self, list_a, list_b, *pargs, **kwargs):
+        """ The difference between two lists, or between a list and a
+            ListOf. """
+        list_objs = {0: list_a, 1: list_b}
+        
+        for i in list_objs:
+            k = 1 - i
+            this = list_objs[i]
+            other = list_objs[k]
+            
+            if not isinstance(this, ListOf):
+                continue
+            
+            dict_objs = {
+                i: this.make_dict(len(other)),
+                k: make_dict_from_list(other)
+                }
+            
+            break
+            
         else:
-            dict_a = list_obj_a.make_dict(len(list_obj_b))
-            dict_b = make_dict_from_list(list_obj_b)
+            dict_objs = {
+                ikey: make_dict_from_list(ivalue)
+                for ikey, ivalue in list_objs.iteritems()
+                }
+        
+        dict_a = dict_objs[0]
+        dict_b = dict_objs[1]
         
         return self.difference_dict(dict_a, dict_b, *pargs, **kwargs)
+    
+    def filter_unlimited(self, unknown, combined_iospec):
+        """ Take the 'unlimited' argument into account. Only keys in the
+            intersection of 'unknown' and 'iospec_dict' are considered unknown
+            when 'unlimited=True'.
+            
+            In other words, when unlimited=True, top-level keys (and only
+            top-level keys) are unlimited."""
+        if unknown is NoDifference:
+            return NoDifference
+        
+        if isinstance(combined_iospec, list):
+            iospec_dict = make_dict_from_list(combined_iospec)
+        else:
+            iospec_dict = combined_iospec
+        
+        result = {
+            ikey: ivalue for ikey, ivalue in unknown.iteritems()
+            if ikey in iospec_dict
+            }
+        
+        if not result:
+            return NoDifference
+        return result
     
     def confirm_type_ioval(self, ioval, expected_type, nonetype_ok=True):
         if expected_type is NotProvided:
@@ -256,7 +296,7 @@ class IOProcessor(object):
             self.confirm_type_dict(ioval, expected_type)
             return
         
-        if isinstance(expected_type, ListOf):
+        if isinstance(expected_type, (list, ListOf)):
             self.confirm_type_list(ioval, expected_type)
             return
         
@@ -283,17 +323,17 @@ class IOProcessor(object):
         
         raise WrongTypeError(expected_type, ioval)
     
-    def confirm_type_dict(self, iovals_dict, iospec, nonetype_ok=True):
+    def confirm_type_dict(self, iovals_dict, iospec_dict, nonetype_ok=True):
         if not isinstance(iovals_dict, dict):
             raise WrongTypeError(dict, iovals_dict)
         
         wrong_types = {}
         
         for key, ioval in iovals_dict.items():
-            if key not in iospec:
+            if key not in iospec_dict:
                 continue
             
-            expected_type = iospec[key]
+            expected_type = iospec_dict[key]
             
             try:
                 self.confirm_type_ioval(ioval, expected_type, nonetype_ok)
@@ -303,7 +343,7 @@ class IOProcessor(object):
         if wrong_types:
             raise WrongTypeDictError(wrong_types)
     
-    def confirm_type_list(self, iovals_list, listof):
+    def confirm_type_list(self, iovals_list, iospec_obj):
         """ 'None' values are not permitted in lists.
             
             An attribute called 'lists_allow_none_values' is being considered
@@ -312,7 +352,11 @@ class IOProcessor(object):
             raise WrongTypeError(list, iovals_list)
         
         iovals_dict = make_dict_from_list(iovals_list)
-        iospec = listof.make_dict(len(iovals_list))
+        
+        if isinstance(iospec_obj, ListOf):
+            iospec = iospec_obj.make_dict(len(iovals_list))
+        else:
+            iospec = make_dict_from_list(iospec_obj)
         
         self.confirm_type_dict(iovals_dict, iospec, nonetype_ok=False)
     
@@ -334,7 +378,7 @@ class IOProcessor(object):
         if isinstance(expected_type, dict):
             return self.coerce_dict(ioval, expected_type)
         
-        if isinstance(expected_type, ListOf):
+        if isinstance(expected_type, (list, ListOf)):
             return self.coerce_list(ioval, expected_type)
         
         # Coerce non-container types.
@@ -361,9 +405,14 @@ class IOProcessor(object):
         
         return result_iovals
     
-    def coerce_list(self, iovals_list, listof):
+    def coerce_list(self, iovals_list, iospec_obj):
         iovals_dict = make_dict_from_list(iovals_list)
-        iospec = listof.make_dict(len(iovals_list))
+        
+        if isinstance(iospec_obj, ListOf):
+            iospec = iospec_obj.make_dict(len(iovals_list))
+        else:
+            iospec = make_dict_from_list(iospec_obj)
+        print iospec
         
         result_dict = self.coerce_dict(iovals_dict, iospec)
         
