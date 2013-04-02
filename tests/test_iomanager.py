@@ -59,9 +59,15 @@ class TestVerifyNoIOSpec(unittest.TestCase):
             iovalue=object()
             )
 
+class TestCoerceNoIOSpec(CoercionTest):
+    def test_no_iospec_passes(self):
+        self.ioprocessor.coerce(
+            iovalue=object()
+            )
 
 
-# ------------------------ Type checking tests -------------------------
+
+# ------------------------ Type-checking tests -------------------------
 
 class VerifyTypeCheckTest(object):
     def correct_type_passes_test(self, parameter_name):
@@ -230,6 +236,193 @@ class TestVerifyTypeCheckNestedIOSpec(
 
 
 
+# ---------------------- Structure-checking tests ----------------------
+    
+class VerifyStructureBasicTest(object):
+    """ Applies to all container types. """
+    def empty_test(self, parameter_name, iovalue):
+        IOProcessor().verify(
+            iovalue=iovalue,
+            **{parameter_name: self.make_iospec(0)}
+            )
+    
+    def empty_gets_empty_passes_test(self, parameter_name):
+        self.empty_test(parameter_name, self.make_iovalue(0))
+    
+    def test_empty_gets_empty_passes_required(self):
+        self.empty_gets_empty_passes_test('required')
+    
+    def test_empty_gets_empty_passes_optional(self):
+        self.empty_gets_empty_passes_test('optional')
+    
+    def empty_gets_none_raises_test(self, parameter_name):
+        with pytest.raises(VerificationFailureError):
+            self.empty_test(parameter_name, None)
+    
+    def test_empty_gets_none_raises_required(self):
+        self.empty_gets_none_raises_test('required')
+    
+    def test_empty_gets_none_raises_optional(self):
+        self.empty_gets_none_raises_test('optional')
+    
+    def parameter_test(self, parameter_name, iovalue):
+        IOProcessor().verify(
+            iovalue=iovalue,
+            **{parameter_name: self.make_iospec(1)}
+            )
+    
+    def expected_iovalue_passes_test(self, parameter_name):
+        self.parameter_test(parameter_name, self.make_iovalue(1))
+    
+    def test_expected_required_passes(self):
+        self.expected_iovalue_passes_test('required')
+    
+    def test_expected_optional_passes(self):
+        self.expected_iovalue_passes_test('optional')
+    
+    def none_value_test(self, parameter_name):
+        self.parameter_test(parameter_name, self.make_iovalue(1, lambda: None))
+    
+    def test_none_value_passes_required(self):
+        self.none_value_test('required')
+    
+    def test_none_value_passes_optional(self):
+        self.none_value_test('optional')
+    
+class VerifyStructureStrictTest(object):
+    """ Applies to 'list', 'tuple', 'dict', 'nested'. """
+    def extra_item_raises_test(self, parameter_name):
+        with pytest.raises(VerificationFailureError):
+            self.parameter_test(parameter_name, self.make_iovalue(2))
+    
+    def test_extra_item_raises_required(self):
+        self.extra_item_raises_test('required')
+    
+    def test_extra_item_raises_optional(self):
+        self.extra_item_raises_test('optional')
+    
+    def missing_item_test(self, parameter_name):
+        self.parameter_test(parameter_name, self.make_iovalue(0))
+    
+    def test_missing_item_raises_required(self):
+        with pytest.raises(VerificationFailureError):
+            self.missing_item_test('required')
+    
+    def test_missing_item_passes_optional(self):
+        self.missing_item_test('optional')
+    
+    def test_required_overrides_optional(self):
+        with pytest.raises(VerificationFailureError):
+            IOProcessor().verify(
+                iovalue=self.make_iovalue(0),
+                required=self.make_iospec(1),
+                optional=self.make_iospec(1),
+                )
+    
+    def test_optional_extends_required(self):
+        IOProcessor().verify(
+            iovalue=self.make_iovalue(2),
+            required=self.make_iospec(1),
+            optional=self.make_iospec(2),
+            )
+
+class VerifyStructureUnlimitedTest(object):
+    """ Applies to 'list', 'tuple', 'dict'. """
+    def unlimited_test(self, parameter_name):
+        IOProcessor().verify(
+            iovalue=self.make_iovalue(1),
+            unlimited=True,
+            **{parameter_name: self.make_iospec(0)}
+            )
+    
+    def test_unlimited_required(self):
+        self.unlimited_test('required')
+    
+    def test_unlimited_optional(self):
+        self.unlimited_test('optional')
+
+@pytest.mark.a
+class ListIOSpecStructureTest(unittest.TestCase):
+    def make_iospec(self, length):
+        return [object for i in range(length)]
+    
+    def make_iovalue(self, length, maker=object):
+        return [maker() for i in range(length)]
+
+class TestVerifyStructureListIOSpec(
+    ListIOSpecStructureTest,
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureUnlimitedTest,
+    ):
+    pass
+
+class ListOfIOSpecStructureTest(unittest.TestCase):
+    def make_iospec(self, length):
+        return iomanager.ListOf(object)
+    
+    def make_iovalue(self, length, maker=object):
+        return [maker() for i in range(length)]
+
+class TestVerifyStructureListOfIOSpec(
+    ListOfIOSpecStructureTest,
+    VerifyStructureBasicTest,
+    ):
+    pass
+
+class DictIOSpecStructureTest(unittest.TestCase):
+    def make_iospec(self, length):
+        keys = list('abc')
+        return {keys[i]: object for i in range(length)}
+    
+    def make_iovalue(self, length, maker=object):
+        keys = list('abc')
+        return {keys[i]: maker() for i in range(length)}
+
+class TestVerifyStructureDictIOSpec(
+    DictIOSpecStructureTest,
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureUnlimitedTest,
+    ):
+    pass
+
+class NestedIOSpecStructureTest(unittest.TestCase):
+    def make_iospec(self, length):
+        keys = list('abc')
+        return {'x': {keys[i]: object for i in range(length)}}
+    
+    def make_iovalue(self, length, maker=object):
+        keys = list('abc')
+        return {'x': {keys[i]: maker() for i in range(length)}}
+
+@pytest.mark.b
+class TestVerifyStructureNestedIOSpec(
+    NestedIOSpecStructureTest,
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    ):
+    def unlimited_extra_nested_item_raises_test(self, parameter_name):
+        """ When 'unlimited' is True, only top-level keyword arguments are
+            unlimited. 'dict'-type iovalues should still be checked for unknown
+            keys. """
+        with pytest.raises(VerificationFailureError):
+            IOProcessor().verify(
+                iovalue=self.make_iovalue(2),
+                unlimited=True,
+                **{parameter_name: self.make_iospec(1)}
+                )
+    
+    @pytest.mark.x
+    def test_unlimited_extra_nested_item_raises_required(self):
+        self.unlimited_extra_nested_item_raises_test('required')
+    
+    @pytest.mark.x
+    def test_unlimited_extra_nested_item_raises_optional(self):
+        self.unlimited_extra_nested_item_raises_test('optional')
+
+
+
 # --------------------- Non-container IOSpec tests ---------------------
 
 class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
@@ -250,12 +443,7 @@ class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
     def test_unlimited_ignored_optional(self):
         self.unlimited_ignored_test('optional')
 
-class TestNonContainerIOValueCoerce(CoercionTest):
-    def test_no_iospec_passes(self):
-        self.ioprocessor.coerce(
-            iovalue=object()
-            )
-    
+class TestCoerceNonContainerIOSpec(CoercionTest):
     def no_coercion_test(self, parameter_name):
         uncoerced_value = self.BeforeCoercionType()
         
@@ -300,67 +488,6 @@ class TestNonContainerIOValueCoerce(CoercionTest):
 
 
 # ---------------------- List-value IOSpec tests -----------------------
-
-class TestIOSpecListVerify(unittest.TestCase):
-    def setUp(self):
-        self.ioprocessor = IOProcessor()
-    
-    def parameter_test(self, parameter_name, iovalue):
-        self.ioprocessor.verify(
-            iovalue=iovalue,
-            **{parameter_name: [object]}
-            )
-    
-    def good_iovalue_passes_test(self, parameter_name):
-        self.parameter_test(parameter_name, [object()])
-    
-    def test_required_passes(self):
-        self.good_iovalue_passes_test('required')
-    
-    def test_optional_passes(self):
-        self.good_iovalue_passes_test('optional')
-    
-    def extra_item_raises_test(self, parameter_name):
-        with pytest.raises(VerificationFailureError):
-            self.parameter_test(parameter_name, [object(), object()])
-    
-    def test_extra_item_raises_required(self):
-        self.extra_item_raises_test('required')
-    
-    def test_extra_item_raises_optional(self):
-        self.extra_item_raises_test('optional')
-    
-    def missing_item_test(self, parameter_name):
-        self.parameter_test(parameter_name, [])
-    
-    def test_missing_item_raises_required(self):
-        with pytest.raises(VerificationFailureError):
-            self.missing_item_test('required')
-    
-    def test_missing_item_passes_optional(self):
-        self.missing_item_test('optional')
-    
-    def none_value_test(self, parameter_name):
-        self.parameter_test(parameter_name, [None])
-    
-    def test_none_value_passes_required(self):
-        self.none_value_test('required')
-    
-    def test_none_value_passes_optional(self):
-        self.none_value_test('optional')
-    
-    def unlimited_test(self, parameter_name):
-        self.ioprocessor.verify(
-            iovalue=[object()],
-            unlimited=True,
-            **{parameter_name: []}
-            )
-    
-    def test_unlimited_required(self):
-        self.unlimited_test('required')
-    
-    def test_unlimited_optional(self):
-        self.unlimited_test('optional')
 
 class TestIOSpecTupleVerify(unittest.TestCase):
     """ Confirm that tuples are treated the same as lists, both when used as
