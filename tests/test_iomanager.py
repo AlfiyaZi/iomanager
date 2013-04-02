@@ -49,20 +49,24 @@ class CoercionTest(unittest.TestCase):
             coercion_functions={self.YesCoercionType: self.coerce_custom}
             )
 
+# --------------------------- Baseline tests ---------------------------
 
-
-# ------------------- Non-container 'iovalue' tests --------------------
+class TestVerifyNoIOSpec(unittest.TestCase):
+    """ When no 'iospec' values are given, verification passes. """
     
-
-class TestNonContainerVerifyTypeCheck(unittest.TestCase):
     def test_no_iospec_passes(self):
         IOProcessor().verify(
             iovalue=object()
             )
-    
+
+
+
+# ------------------------ Type checking tests -------------------------
+
+class VerifyTypeCheckTest(object):
     def correct_type_passes_test(self, parameter_name):
         IOProcessor().verify(
-            iovalue=object(),
+            iovalue=self.wrap_iovalue(object()),
             **{parameter_name: object}
             )
     
@@ -74,8 +78,8 @@ class TestNonContainerVerifyTypeCheck(unittest.TestCase):
     
     def correct_type_subclass_passes_test(self, parameter_name):
         IOProcessor().verify(
-            iovalue=CustomSubclassType(),
-            **{parameter_name: CustomType}
+            iovalue=self.wrap_iovalue(CustomSubclassType()),
+            **{parameter_name: self.wrap_iospec(CustomType)}
             )
     
     def test_correct_type_subclass_passes_required(self):
@@ -87,8 +91,8 @@ class TestNonContainerVerifyTypeCheck(unittest.TestCase):
     def wrong_type_raises_test(self, parameter_name):
         with pytest.raises(VerificationFailureError):
             IOProcessor().verify(
-                iovalue=object(),
-                **{parameter_name: CustomType}
+                iovalue=self.wrap_iovalue(object()),
+                **{parameter_name: self.wrap_iospec(CustomType)}
                 )
     
     def test_wrong_type_raises_required(self):
@@ -99,8 +103,8 @@ class TestNonContainerVerifyTypeCheck(unittest.TestCase):
     
     def none_value_passes_test(self, parameter_name):
         IOProcessor().verify(
-            iovalue=None,
-            **{parameter_name: object}
+            iovalue=self.wrap_iovalue(None),
+            **{parameter_name: self.wrap_iospec(object)}
             )
     
     def test_none_value_passes_required(self):
@@ -111,8 +115,8 @@ class TestNonContainerVerifyTypeCheck(unittest.TestCase):
     
     def anytype_passes_test(self, parameter_name):
         IOProcessor().verify(
-            iovalue=object(),
-            **{parameter_name: iomanager.AnyType}
+            iovalue=self.wrap_iovalue(object()),
+            **{parameter_name: self.wrap_iospec(iomanager.AnyType)}
             )
     
     def test_anytype_passes_required(self):
@@ -123,22 +127,20 @@ class TestNonContainerVerifyTypeCheck(unittest.TestCase):
     
     def test_required_overrides_optional(self):
         IOProcessor().verify(
-            iovalue=object(),
-            required=object,
-            optional=CustomType,
+            iovalue=self.wrap_iovalue(object()),
+            required=self.wrap_iospec(object),
+            optional=self.wrap_iospec(CustomType),
             )
-
-@pytest.mark.a
-class TestNonContainerVerifyTypeCheckCustomFunction(unittest.TestCase):
-    """ Confirm type checking behavior when custom type-checking functions are
-        in use. """
-    def verify_test(self, value, custom_function):
+    
+    def custom_function_test(self, value, custom_function):
+        """ Confirm type checking behavior when custom type-checking functions
+            are in use. """
         ioprocessor = IOProcessor(
             typecheck_functions={CustomType: custom_function}
             )
         ioprocessor.verify(
-            iovalue=value,
-            required=CustomType
+            iovalue=self.wrap_iovalue(value),
+            required=self.wrap_iospec(CustomType),
             )
     
     def test_type_check_failure_error(self):
@@ -151,7 +153,7 @@ class TestNonContainerVerifyTypeCheckCustomFunction(unittest.TestCase):
         def reject_value(value, expected_type):
             raise TypeCheckFailureError
         with pytest.raises(VerificationFailureError):
-            self.verify_test(CustomType(), reject_value)
+            self.custom_function_test(CustomType(), reject_value)
     
     def test_type_check_success_error(self):
         """ When a custom type-checking function raises a TypeCheckSuccessError,
@@ -159,9 +161,78 @@ class TestNonContainerVerifyTypeCheckCustomFunction(unittest.TestCase):
             normally. """
         def accept_value(value, expected_type):
             raise TypeCheckSuccessError
-        self.verify_test(object(), accept_value)
+        self.custom_function_test(object(), accept_value)
 
-class TestNonContainerVerifyStructure(unittest.TestCase):
+class NonContainerIOSpecTypeCheckTest(unittest.TestCase):
+    def wrap_iovalue(self, iovalue):
+        return iovalue
+    
+    def wrap_iospec(self, iospec):
+        return iospec
+
+class TestVerifyTypeCheckNonContainerIOSpec(
+    NonContainerIOSpecTypeCheckTest,
+    VerifyTypeCheckTest,
+    ):
+    pass
+
+class ListIOSpecTypeCheckTest(unittest.TestCase):
+    def wrap_iovalue(self, iovalue):
+        return [iovalue]
+    
+    def wrap_iospec(self, iospec):
+        return [iospec]
+
+class TestVerifyTypeCheckListIOSpec(
+    ListIOSpecTypeCheckTest,
+    VerifyTypeCheckTest,
+    ):
+    pass
+
+class DictIOSpecTypeCheckTest(unittest.TestCase):
+    def wrap_iovalue(self, iovalue):
+        return {'a': iovalue}
+    
+    def wrap_iospec(self, iospec):
+        return {'a': iospec}
+
+class TestVerifyTypeCheckDictIOSpec(
+    DictIOSpecTypeCheckTest,
+    VerifyTypeCheckTest,
+    ):
+    pass
+
+class ListOfIOSpecTypeCheckTest(unittest.TestCase):
+    def wrap_iovalue(self, iovalue):
+        return [iovalue]
+    
+    def wrap_iospec(self, iospec):
+        return iomanager.ListOf(iospec)
+
+class TestVerifyTypeCheckListOfIOSpec(
+    ListOfIOSpecTypeCheckTest,
+    VerifyTypeCheckTest,
+    ):
+    pass
+
+class NestedIOSpecTypeCheckTest(unittest.TestCase):
+    def wrap_iovalue(self, iovalue):
+        return {'a': {'b': iovalue}}
+    
+    def wrap_iospec(self, iospec):
+        return {'a': {'b': iospec}}
+
+class TestVerifyTypeCheckNestedIOSpec(
+    NestedIOSpecTypeCheckTest,
+    VerifyTypeCheckTest,
+    ):
+    pass
+
+
+
+# --------------------- Non-container IOSpec tests ---------------------
+
+class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
     """ When dealing with non-container 'iospec' values, there is not much
         structure to-be-verified. This case only needs to test that 'unlimited'
         is ignored when non-container types are involved. """
@@ -887,67 +958,6 @@ class TestStructuredDictRequiredOverridesOptional(VerificationTest):
         iovals = self.all_iovals()
         del iovals['c']['r']
         self.bad_iovals_test(iovals)
-
-
-
-# ------------------------ Type checking tests -------------------------
-
-class TypeCheckingTest(unittest.TestCase):
-    """ Confirm that coercion behaves correctly when the iospec 'type object' is
-        a 'class' object. """
-    
-    class CustomType(object):
-        """ A custom type for testing type-checking. """
-    
-    class CustomSubclassType(CustomType):
-        """ A custom type for testing type-checking. """
-    
-    class InvalidType(object):
-        """ A custom type for testing type-checking. """
-
-class TypeCheckingExtendedTest(object):
-    def call_process_method(self, value):
-        ioprocessor = IOProcessor()
-        
-        iovals = {
-            'a': self.make_extended_ioval(value)
-            }
-        
-        required = {
-            'a': self.make_extended_iospec()
-            }
-        
-        ioprocessor.verify(
-            iovalue=iovals,
-            required=required
-            )
-    
-    def test_correct_type_passes(self):
-        self.call_process_method(self.CustomType())
-    
-    def test_invalid_type_raises(self):
-        with pytest.raises(VerificationFailureError):
-            self.call_process_method(self.InvalidType())
-
-class TestTypeCheckingStructured(TypeCheckingTest, TypeCheckingExtendedTest):
-    """ Confirm that type checking is occurring when the iospec 'type object' is
-        a dictionary. """
-    
-    def make_extended_ioval(self, value):
-        return {'b': value}
-    
-    def make_extended_iospec(self):
-        return {'b': self.CustomType}
-
-class TestTypeCheckingListOf(TypeCheckingTest, TypeCheckingExtendedTest):
-    """ Confirm that type checking is occurring when the iospec 'type object' is
-        a ListOf instance. """
-    
-    def make_extended_ioval(self, value):
-        return [value]
-    
-    def make_extended_iospec(self):
-        return iomanager.ListOf(self.CustomType)
 
 
 
