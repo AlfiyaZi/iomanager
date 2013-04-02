@@ -11,6 +11,20 @@ v0.2.1, 2013-03-27 -- 'process' parameters.
 - Add tests for 'tspecs_from_callable' function.
 - Add 'IOProcessFailureError', 'combine_tspecs' to package-level namespace.
 
-v0.2.2, YYYY-MM-DD -- iomanager
+v0.2.2, 2013-03-30 -- iomanager
 - Rename package to 'iomanager'.
+- Add 'IOManager' class.
+- Break 'IOProcessor.process' method into separate 'coerce', 'verify' methods.
+- Coercion no longer raises any errors. Remove 'TypeCoercion...' errors.
 - Rename 'IOProcessFailureError' to 'VerificationFailureError'.
+- Add type-checking errors 'TypeCheckFailureError', 'TypeCheckSuccessError'.
+
+v0.3.0, 2013-04-02 -- Stable
+- First release suitable for dependency.
+- Add support for non-container-type iospecs, iovalues.
+- Add support for tuple-type iospecs, iovalues.
+- Add README text explaining how to use this package.
+- Change 'default' things to 'json' things. They were always intended to be JSON
+  tools, so now their names reflect that. Move JSON tools into 'json_tools'
+  module.
+- Completely refactor tests.
