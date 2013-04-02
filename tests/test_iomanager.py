@@ -69,7 +69,7 @@ class TestCoerceNoIOSpec(CoercionTest):
 
 # ------------------------ Type-checking tests -------------------------
 
-class VerifyTypeCheckTest(object):
+class VerifyTypeCheckBaseTest(object):
     def correct_type_passes_test(self, parameter_name):
         IOProcessor().verify(
             iovalue=self.wrap_iovalue(object()),
@@ -106,18 +106,6 @@ class VerifyTypeCheckTest(object):
     
     def test_wrong_type_raises_optional(self):
         self.wrong_type_raises_test('optional')
-    
-    def none_value_passes_test(self, parameter_name):
-        IOProcessor().verify(
-            iovalue=self.wrap_iovalue(None),
-            **{parameter_name: self.wrap_iospec(object)}
-            )
-    
-    def test_none_value_passes_required(self):
-        self.none_value_passes_test('required')
-    
-    def test_none_value_passes_optional(self):
-        self.none_value_passes_test('optional')
     
     def anytype_passes_test(self, parameter_name):
         IOProcessor().verify(
@@ -168,6 +156,38 @@ class VerifyTypeCheckTest(object):
         def accept_value(value, expected_type):
             raise TypeCheckSuccessError
         self.custom_function_test(object(), accept_value)
+    
+    def none_value_passes_test(self, parameter_name):
+        """ Note that 'None' values will always pass when the expected type is
+            'object', because 'None' is an instance of 'object'! So it is
+            necessary to use 'CustomType' in this test to get a meaningful
+            result. """
+        IOProcessor().verify(
+            iovalue=self.wrap_iovalue(None),
+            **{parameter_name: self.wrap_iospec(CustomType)}
+            )
+
+class VerifyTypeCheckStandardTest(VerifyTypeCheckBaseTest):
+    """ Applies to 'dict', 'list', 'tuple', 'nested'. """
+    
+    def test_none_value_passes_required(self):
+        self.none_value_passes_test('required')
+    
+    def test_none_value_passes_optional(self):
+        self.none_value_passes_test('optional')
+
+class VerifyTypeCheckRejectNoneValuesTest(VerifyTypeCheckBaseTest):
+    """ Applies to 'ListOf'. """
+    
+    def none_value_raises_test(self, parameter_name):
+        with pytest.raises(VerificationFailureError):
+            self.none_value_passes_test(parameter_name)
+    
+    def test_none_value_raises_required(self):
+        self.none_value_raises_test('required')
+    
+    def test_none_value_raises_optional(self):
+        self.none_value_raises_test('optional')
 
 class NonContainerIOSpecTypeCheckTest(unittest.TestCase):
     def wrap_iovalue(self, iovalue):
@@ -178,7 +198,7 @@ class NonContainerIOSpecTypeCheckTest(unittest.TestCase):
 
 class TestVerifyTypeCheckNonContainerIOSpec(
     NonContainerIOSpecTypeCheckTest,
-    VerifyTypeCheckTest,
+    VerifyTypeCheckStandardTest,
     ):
     pass
 
@@ -191,7 +211,7 @@ class ListIOSpecTypeCheckTest(unittest.TestCase):
 
 class TestVerifyTypeCheckListIOSpec(
     ListIOSpecTypeCheckTest,
-    VerifyTypeCheckTest,
+    VerifyTypeCheckStandardTest,
     ):
     pass
 
@@ -204,7 +224,7 @@ class DictIOSpecTypeCheckTest(unittest.TestCase):
 
 class TestVerifyTypeCheckDictIOSpec(
     DictIOSpecTypeCheckTest,
-    VerifyTypeCheckTest,
+    VerifyTypeCheckStandardTest,
     ):
     pass
 
@@ -217,7 +237,7 @@ class ListOfIOSpecTypeCheckTest(unittest.TestCase):
 
 class TestVerifyTypeCheckListOfIOSpec(
     ListOfIOSpecTypeCheckTest,
-    VerifyTypeCheckTest,
+    VerifyTypeCheckRejectNoneValuesTest,
     ):
     pass
 
@@ -230,7 +250,7 @@ class NestedIOSpecTypeCheckTest(unittest.TestCase):
 
 class TestVerifyTypeCheckNestedIOSpec(
     NestedIOSpecTypeCheckTest,
-    VerifyTypeCheckTest,
+    VerifyTypeCheckStandardTest,
     ):
     pass
 
@@ -341,7 +361,6 @@ class VerifyStructureUnlimitedTest(object):
     def test_unlimited_optional(self):
         self.unlimited_test('optional')
 
-@pytest.mark.a
 class ListIOSpecStructureTest(unittest.TestCase):
     def make_iospec(self, length):
         return [object for i in range(length)]
@@ -396,7 +415,6 @@ class NestedIOSpecStructureTest(unittest.TestCase):
         keys = list('abc')
         return {'x': {keys[i]: maker() for i in range(length)}}
 
-@pytest.mark.b
 class TestVerifyStructureNestedIOSpec(
     NestedIOSpecStructureTest,
     VerifyStructureBasicTest,
@@ -413,17 +431,11 @@ class TestVerifyStructureNestedIOSpec(
                 **{parameter_name: self.make_iospec(1)}
                 )
     
-    @pytest.mark.x
     def test_unlimited_extra_nested_item_raises_required(self):
         self.unlimited_extra_nested_item_raises_test('required')
     
-    @pytest.mark.x
     def test_unlimited_extra_nested_item_raises_optional(self):
         self.unlimited_extra_nested_item_raises_test('optional')
-
-
-
-# --------------------- Non-container IOSpec tests ---------------------
 
 class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
     """ When dealing with non-container 'iospec' values, there is not much
@@ -442,6 +454,10 @@ class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
     
     def test_unlimited_ignored_optional(self):
         self.unlimited_ignored_test('optional')
+
+
+
+# --------------------- Non-container IOSpec tests ---------------------
 
 class TestCoerceNonContainerIOSpec(CoercionTest):
     def no_coercion_test(self, parameter_name):
@@ -509,86 +525,6 @@ class TestIOSpecListCoerce(CoercionTest):
     def test_coercion_optional(self):
         self.coercion_test('optional')
 
-class TestIOSpecListVerifyNested(unittest.TestCase):
-    """ Confirm that nested container types behave as expected. """
-    def make_nested_iospec(self, iospec):
-        return [iospec]
-    
-    def make_nested_iovalue(self, value):
-        return [value]
-    
-    def iospec_test(self, parameter_name, iovalue, iospec):
-        IOProcessor().verify(
-            iovalue=self.make_nested_iovalue(iovalue),
-            **{parameter_name: self.make_nested_iospec(iospec)}
-            )
-    
-    # ----------------------- Nested list tests ------------------------
-    
-    def list_passes_test(self, parameter_name, iovalue):
-        self.iospec_test(parameter_name, iovalue, [object])
-    
-    def list_expected_passes_test(self, parameter_name):
-        self.list_passes_test(parameter_name, [object()])
-    
-    def test_list_expected_passes_required(self):
-        self.list_expected_passes_test('required')
-    
-    def test_list_expected_passes_optional(self):
-        self.list_expected_passes_test('optional')
-    
-    def test_list_missing_item_passes_optional(self):
-        self.list_passes_test('optional', [])
-    
-    def list_raises_test(self, *pargs, **kwargs):
-        with pytest.raises(VerificationFailureError):
-            self.list_passes_test(*pargs, **kwargs)
-    
-    def list_extra_item_raises_test(self, parameter_name):
-        self.list_raises_test(parameter_name, [object(), object()])
-    
-    def test_list_extra_item_raises_required(self):
-        self.list_extra_item_raises_test('required')
-    
-    def test_list_extra_item_raises_optional(self):
-        self.list_extra_item_raises_test('optional')
-    
-    def test_list_missing_item_raises_required(self):
-        self.list_raises_test('required', [])
-    
-    # ----------------------- Nested dict tests ------------------------
-    
-    def dict_passes_test(self, parameter_name, iovalue):
-        self.iospec_test(parameter_name, iovalue, {'a': object})
-    
-    def dict_expected_passes_test(self, parameter_name):
-        self.dict_passes_test(parameter_name, {'a': object()})
-    
-    def test_dict_expected_passes_required(self):
-        self.dict_expected_passes_test('required')
-    
-    def test_dict_expected_passes_optional(self):
-        self.dict_expected_passes_test('optional')
-    
-    def test_dict_missing_item_passes_optional(self):
-        self.dict_passes_test('optional', {})
-    
-    def dict_raises_test(self, *pargs, **kwargs):
-        with pytest.raises(VerificationFailureError):
-            self.dict_passes_test(*pargs, **kwargs)
-    
-    def dict_extra_item_raises_test(self, parameter_name):
-        self.dict_raises_test(parameter_name, {'a': object(), 'b': object()})
-    
-    def test_dict_extra_item_raises_required(self):
-        self.dict_extra_item_raises_test('required')
-    
-    def test_dict_extra_item_raises_optional(self):
-        self.dict_extra_item_raises_test('optional')
-    
-    def test_dict_missing_item_raises_required(self):
-        self.dict_raises_test('required', {})
-
 
 
 # ---------------------- Dictionary keys checking ----------------------
@@ -613,102 +549,6 @@ class VerificationTest(unittest.TestCase):
             required={},
             unlimited=False,
             )
-
-class BasicIOSpecTest(VerificationTest):
-    @classmethod
-    def required_iovals(cls):
-        return dict(a=0, b=1, c=2)
-    
-    @classmethod
-    def optional_iovals(cls):
-        return dict(d=3, e=4, f=5)
-    
-    @classmethod
-    def required_iospec(cls):
-        return {'a': int, 'b': int, 'c': int}
-    
-    @classmethod
-    def optional_iospec(cls):
-        return {'d': int, 'e': int, 'f': int}
-    
-    @classmethod
-    def all_iovals(cls):
-        result = cls.required_iovals()
-        result.update(cls.optional_iovals())
-        return result
-
-class TestRequiredIOSpec(BasicIOSpecTest):
-    def trial_iospecs(self):
-        return dict(
-            required=self.required_iospec()
-            )
-    
-    def test_good_iovals(self):
-        self.good_iovals_test(self.required_iovals())
-    
-    def test_missing_ioval_raises(self):
-        iovals = self.required_iovals()
-        del iovals['c']
-        self.bad_iovals_test(iovals)
-    
-    def test_extra_ioval_raises(self):
-        iovals = self.required_iovals()
-        iovals['x'] = 9
-        self.bad_iovals_test(iovals)
-
-class TestOptionalIOSpec(BasicIOSpecTest):
-    def trial_iospecs(self):
-        return dict(optional=self.optional_iospec())
-    
-    def test_good_iovals(self):
-        self.good_iovals_test(self.optional_iovals())
-    
-    def test_missing_ioval_passes(self):
-        iovals = self.optional_iovals()
-        del iovals['f']
-        self.good_iovals_test(iovals)
-    
-    def test_extra_ioval_raises(self):
-        iovals = self.optional_iovals()
-        iovals['x'] = 9
-        self.bad_iovals_test(iovals)
-
-class TestUnlimitedIOVals(BasicIOSpecTest):
-    def trial_iospecs(self):
-        return dict(unlimited=True)
-    
-    def test_empty_iovals_passes(self):
-        self.good_iovals_test(iovals={})
-    
-    def test_many_iovals_passes(self):
-        keys = list(string.ascii_lowercase)
-        iovals = dict(zip(keys, range(len(keys))))
-        self.good_iovals_test(iovals)
-
-class TestRequiredAndOptionalBoth(BasicIOSpecTest):
-    def trial_iospecs(self):
-        return dict(
-            required=self.required_iospec(),
-            optional=self.optional_iospec(),
-            )
-    
-    def test_all_iovals_pass(self):
-        self.good_iovals_test(iovals=self.all_iovals())
-    
-    def test_missing_required_raises(self):
-        iovals = self.all_iovals()
-        del iovals['a']
-        self.bad_iovals_test(iovals)
-    
-    def test_missing_optional_passes(self):
-        iovals = self.all_iovals()
-        del iovals['d']
-        self.good_iovals_test(iovals)
-    
-    def test_extra_kwarg_raises(self):
-        iovals = self.all_iovals()
-        iovals['x'] = 9
-        self.bad_iovals_test(iovals)
 
 
 
@@ -735,7 +575,7 @@ class TestListOf(VerificationTest):
         self.good_iovals_test({'a': [0]})
     
     def test_item_none_value_raises(self):
-        self.bad_iovals_test({'a': [None,]})
+        self.bad_iovals_test({'a': [None]})
     
     def test_all_bad_type_raises(self):
         self.bad_iovals_test({'a': ['a', 'b', 'c']})

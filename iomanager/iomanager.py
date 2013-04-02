@@ -189,7 +189,7 @@ class IOProcessor(object):
                 ('Not allowed: ', unknown),
                 ('Wrong type: ', wrong_types),
                 ]
-            if output_part
+            if output_part and output_part is not NoDifference
             ]
         
         err_msg = ('Invalid RPC arguments.\n' + '\n'.join(err_msg_parts))
@@ -412,7 +412,6 @@ class IOProcessor(object):
             iospec = iospec_obj.make_dict(len(iovals_list))
         else:
             iospec = make_dict_from_list(iospec_obj)
-        print iospec
         
         result_dict = self.coerce_dict(iovals_dict, iospec)
         
