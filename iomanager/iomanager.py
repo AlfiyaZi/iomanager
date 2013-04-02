@@ -313,6 +313,10 @@ class IOProcessor(object):
             except TypeCheckFailureError:
                 raise WrongTypeError(expected_type, ioval)
         
+        # Catch 'None' values.
+        if ioval is None and not nonetype_ok:
+            raise WrongTypeError(expected_type, ioval)
+        
         # General case.
         if (
             isinstance(ioval, expected_type) or
@@ -344,7 +348,7 @@ class IOProcessor(object):
             raise WrongTypeDictError(wrong_types)
     
     def confirm_type_list(self, iovals_list, iospec_obj):
-        """ 'None' values are not permitted in lists.
+        """ 'None' values are not permitted when ListOf is expected.
             
             An attribute called 'lists_allow_none_values' is being considered
             to allow modification of this behavior. """
@@ -358,7 +362,9 @@ class IOProcessor(object):
         else:
             iospec = make_dict_from_list(iospec_obj)
         
-        self.confirm_type_dict(iovals_dict, iospec, nonetype_ok=False)
+        nonetype_ok = not isinstance(iospec_obj, ListOf)
+        
+        self.confirm_type_dict(iovals_dict, iospec, nonetype_ok=nonetype_ok)
     
     def coerce(
         self,

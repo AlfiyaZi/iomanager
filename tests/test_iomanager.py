@@ -158,13 +158,9 @@ class VerifyTypeCheckBaseTest(object):
         self.custom_function_test(object(), accept_value)
     
     def none_value_passes_test(self, parameter_name):
-        """ Note that 'None' values will always pass when the expected type is
-            'object', because 'None' is an instance of 'object'! So it is
-            necessary to use 'CustomType' in this test to get a meaningful
-            result. """
         IOProcessor().verify(
             iovalue=self.wrap_iovalue(None),
-            **{parameter_name: self.wrap_iospec(CustomType)}
+            **{parameter_name: self.wrap_iospec(object)}
             )
 
 class VerifyTypeCheckStandardTest(VerifyTypeCheckBaseTest):
@@ -299,15 +295,6 @@ class VerifyStructureBasicTest(object):
     
     def test_expected_optional_passes(self):
         self.expected_iovalue_passes_test('optional')
-    
-    def none_value_test(self, parameter_name):
-        self.parameter_test(parameter_name, self.make_iovalue(1, lambda: None))
-    
-    def test_none_value_passes_required(self):
-        self.none_value_test('required')
-    
-    def test_none_value_passes_optional(self):
-        self.none_value_test('optional')
     
 class VerifyStructureStrictTest(object):
     """ Applies to 'list', 'tuple', 'dict', 'nested'. """
