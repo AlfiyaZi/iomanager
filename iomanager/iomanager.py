@@ -359,7 +359,7 @@ class IOProcessor(object):
         if isinstance(expected_type, dict):
             return self.coerce_dict(ioval, expected_type)
         
-        if isinstance(expected_type, ListOf):
+        if isinstance(expected_type, (list, ListOf)):
             return self.coerce_list(ioval, expected_type)
         
         # Coerce non-container types.
@@ -386,9 +386,14 @@ class IOProcessor(object):
         
         return result_iovals
     
-    def coerce_list(self, iovals_list, listof):
+    def coerce_list(self, iovals_list, iospec_obj):
         iovals_dict = make_dict_from_list(iovals_list)
-        iospec = listof.make_dict(len(iovals_list))
+        
+        if isinstance(iospec_obj, ListOf):
+            iospec = iospec_obj.make_dict(len(iovals_list))
+        else:
+            iospec = make_dict_from_list(iospec_obj)
+        print iospec
         
         result_dict = self.coerce_dict(iovals_dict, iospec)
         

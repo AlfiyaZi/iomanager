@@ -226,9 +226,11 @@ class TestIOSpecListVerify(unittest.TestCase):
             **{parameter_name: []}
             )
     
+    @pytest.mark.a
     def test_unlimited_required(self):
         self.unlimited_test('required')
     
+    @pytest.mark.a
     def test_unlimited_optional(self):
         self.unlimited_test('optional')
 
@@ -236,12 +238,11 @@ class TestIOSpecTupleVerify(unittest.TestCase):
     """ Confirm that tuples are treated the same as lists, both when used as
         'iospec' and 'iovalue'. """
 
-@pytest.mark.a
 class TestIOSpecListCoerce(CoercionTest):
     def coercion_test(self, parameter_name):
         result_list = self.ioprocessor.coerce(
             iovalue=[self.BeforeCoercionType()],
-            **{parameter_name: self.YesCoercionType}
+            **{parameter_name: [self.YesCoercionType]}
             )
         result = result_list[0]
         
@@ -253,7 +254,6 @@ class TestIOSpecListCoerce(CoercionTest):
     def test_coercion_optional(self):
         self.coercion_test('optional')
 
-@pytest.mark.a
 class TestIOSpecListVerifyNested(unittest.TestCase):
     """ Confirm that nested container types behave as expected. """
     def make_nested_iospec(self, iospec):
