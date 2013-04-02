@@ -568,6 +568,9 @@ def combine_iospecs(iospec_a=NotProvided, iospec_b=NotProvided):
     if all_are_instances((iospec_a, iospec_b), dict):
         return combine_iospecs_dict(iospec_a, iospec_b)
     
+    if all_are_instances((iospec_a, iospec_b), list):
+        return combine_iospecs_list(iospec_a, iospec_b)
+    
     if iospec_a is NotProvided:
         if iospec_b is NotProvided:
             return AnyType
@@ -584,6 +587,14 @@ def combine_iospecs_dict(iospec_a, iospec_b):
             )
         for ikey in all_keys
         }
+
+def combine_iospecs_list(iospec_list_a, iospec_list_b):
+    iospec_a = make_dict_from_list(iospec_list_a)
+    iospec_b = make_dict_from_list(iospec_list_b)
+    
+    result_dict = combine_iospecs_dict(iospec_a, iospec_b)
+    
+    return [result_dict[i] for i in sorted(result_dict.iterkeys())]
 
 def make_missing_output(iospec):
     if iospec is NoDifference:
