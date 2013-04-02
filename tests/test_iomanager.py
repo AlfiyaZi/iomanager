@@ -164,70 +164,55 @@ class VerifyTypeCheckRejectNoneValuesTest(VerifyTypeCheckBaseTest):
     def test_none_value_raises_optional(self):
         self.none_value_raises_test('optional')
 
-class NonContainerIOSpecTypeCheckTest(unittest.TestCase):
+class TestVerifyTypeCheckNonContainerIOSpec(
+    VerifyTypeCheckStandardTest,
+    unittest.TestCase,
+    ):
     def wrap_iovalue(self, iovalue):
         return iovalue
     
     def wrap_iospec(self, iospec):
         return iospec
 
-class TestVerifyTypeCheckNonContainerIOSpec(
-    NonContainerIOSpecTypeCheckTest,
+class TestVerifyTypeCheckListIOSpec(
     VerifyTypeCheckStandardTest,
+    unittest.TestCase,
     ):
-    pass
-
-class ListIOSpecTypeCheckTest(unittest.TestCase):
     def wrap_iovalue(self, iovalue):
         return [iovalue]
     
     def wrap_iospec(self, iospec):
         return [iospec]
 
-class TestVerifyTypeCheckListIOSpec(
-    ListIOSpecTypeCheckTest,
+class TestVerifyTypeCheckDictIOSpec(
     VerifyTypeCheckStandardTest,
+    unittest.TestCase,
     ):
-    pass
-
-class DictIOSpecTypeCheckTest(unittest.TestCase):
     def wrap_iovalue(self, iovalue):
         return {'a': iovalue}
     
     def wrap_iospec(self, iospec):
         return {'a': iospec}
 
-class TestVerifyTypeCheckDictIOSpec(
-    DictIOSpecTypeCheckTest,
-    VerifyTypeCheckStandardTest,
+class TestVerifyTypeCheckListOfIOSpec(
+    VerifyTypeCheckRejectNoneValuesTest,
+    unittest.TestCase,
     ):
-    pass
-
-class ListOfIOSpecTypeCheckTest(unittest.TestCase):
     def wrap_iovalue(self, iovalue):
         return [iovalue]
     
     def wrap_iospec(self, iospec):
         return iomanager.ListOf(iospec)
 
-class TestVerifyTypeCheckListOfIOSpec(
-    ListOfIOSpecTypeCheckTest,
-    VerifyTypeCheckRejectNoneValuesTest,
+class TestVerifyTypeCheckNestedIOSpec(
+    VerifyTypeCheckStandardTest,
+    unittest.TestCase,
     ):
-    pass
-
-class NestedIOSpecTypeCheckTest(unittest.TestCase):
     def wrap_iovalue(self, iovalue):
         return {'a': {'b': iovalue}}
     
     def wrap_iospec(self, iospec):
         return {'a': {'b': iospec}}
-
-class TestVerifyTypeCheckNestedIOSpec(
-    NestedIOSpecTypeCheckTest,
-    VerifyTypeCheckStandardTest,
-    ):
-    pass
 
 
 
@@ -327,35 +312,24 @@ class VerifyStructureUnlimitedTest(object):
     def test_unlimited_optional(self):
         self.unlimited_test('optional')
 
-class ListIOSpecStructureTest(unittest.TestCase):
+class TestVerifyStructureListIOSpec(
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureUnlimitedTest,
+    unittest.TestCase,
+    ):
     def make_iospec(self, length):
         return [object for i in range(length)]
     
     def make_iovalue(self, length, maker=object):
         return [maker() for i in range(length)]
 
-class TestVerifyStructureListIOSpec(
-    ListIOSpecStructureTest,
+class TestVerifyStructureDictIOSpec(
     VerifyStructureBasicTest,
     VerifyStructureStrictTest,
     VerifyStructureUnlimitedTest,
+    unittest.TestCase,
     ):
-    pass
-
-class ListOfIOSpecStructureTest(unittest.TestCase):
-    def make_iospec(self, length):
-        return iomanager.ListOf(object)
-    
-    def make_iovalue(self, length, maker=object):
-        return [maker() for i in range(length)]
-
-class TestVerifyStructureListOfIOSpec(
-    ListOfIOSpecStructureTest,
-    VerifyStructureBasicTest,
-    ):
-    pass
-
-class DictIOSpecStructureTest(unittest.TestCase):
     def make_iospec(self, length):
         keys = list('abc')
         return {keys[i]: object for i in range(length)}
@@ -364,15 +338,21 @@ class DictIOSpecStructureTest(unittest.TestCase):
         keys = list('abc')
         return {keys[i]: maker() for i in range(length)}
 
-class TestVerifyStructureDictIOSpec(
-    DictIOSpecStructureTest,
+class TestVerifyStructureListOfIOSpec(
+    VerifyStructureBasicTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return iomanager.ListOf(object)
+    
+    def make_iovalue(self, length, maker=object):
+        return [maker() for i in range(length)]
+
+class TestVerifyStructureNestedIOSpec(
     VerifyStructureBasicTest,
     VerifyStructureStrictTest,
-    VerifyStructureUnlimitedTest,
+    unittest.TestCase,
     ):
-    pass
-
-class NestedIOSpecStructureTest(unittest.TestCase):
     def make_iospec(self, length):
         keys = list('abc')
         return {'x': {keys[i]: object for i in range(length)}}
@@ -380,12 +360,7 @@ class NestedIOSpecStructureTest(unittest.TestCase):
     def make_iovalue(self, length, maker=object):
         keys = list('abc')
         return {'x': {keys[i]: maker() for i in range(length)}}
-
-class TestVerifyStructureNestedIOSpec(
-    NestedIOSpecStructureTest,
-    VerifyStructureBasicTest,
-    VerifyStructureStrictTest,
-    ):
+    
     def unlimited_extra_nested_item_raises_test(self, parameter_name):
         """ When 'unlimited' is True, only top-level keyword arguments are
             unlimited. 'dict'-type iovalues should still be checked for unknown
