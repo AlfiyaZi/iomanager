@@ -52,7 +52,7 @@ class VerifyTypeCheckBaseTest(object):
     def correct_type_passes_test(self, parameter_name):
         IOProcessor().verify(
             iovalue=self.wrap_iovalue(object()),
-            **{parameter_name: object}
+            **{parameter_name: self.wrap_iospec(object)}
             )
     
     def test_correct_type_passes_required(self):
@@ -168,51 +168,61 @@ class TestVerifyTypeCheckNonContainerIOSpec(
     VerifyTypeCheckStandardTest,
     unittest.TestCase,
     ):
-    def wrap_iovalue(self, iovalue):
-        return iovalue
-    
     def wrap_iospec(self, iospec):
         return iospec
+    
+    def wrap_iovalue(self, iovalue):
+        return iovalue
 
 class TestVerifyTypeCheckListIOSpec(
     VerifyTypeCheckStandardTest,
     unittest.TestCase,
     ):
-    def wrap_iovalue(self, iovalue):
-        return [iovalue]
-    
     def wrap_iospec(self, iospec):
         return [iospec]
+    
+    def wrap_iovalue(self, iovalue):
+        return [iovalue]
+
+class TestVerifyTypeCheckTupleIOSpec(
+    VerifyTypeCheckStandardTest,
+    unittest.TestCase,
+    ):
+    def wrap_iospec(self, iospec):
+        return tuple([iospec])
+    
+    def wrap_iovalue(self, iovalue):
+        return tuple([iovalue])
 
 class TestVerifyTypeCheckDictIOSpec(
     VerifyTypeCheckStandardTest,
     unittest.TestCase,
     ):
-    def wrap_iovalue(self, iovalue):
-        return {'a': iovalue}
-    
     def wrap_iospec(self, iospec):
         return {'a': iospec}
+    
+    def wrap_iovalue(self, iovalue):
+        return {'a': iovalue}
 
 class TestVerifyTypeCheckListOfIOSpec(
     VerifyTypeCheckRejectNoneValuesTest,
     unittest.TestCase,
     ):
-    def wrap_iovalue(self, iovalue):
-        return [iovalue]
-    
     def wrap_iospec(self, iospec):
         return iomanager.ListOf(iospec)
+    
+    def wrap_iovalue(self, iovalue):
+        return [iovalue]
 
 class TestVerifyTypeCheckNestedIOSpec(
     VerifyTypeCheckStandardTest,
     unittest.TestCase,
     ):
-    def wrap_iovalue(self, iovalue):
-        return {'a': {'b': iovalue}}
-    
     def wrap_iospec(self, iospec):
         return {'a': {'b': iospec}}
+    
+    def wrap_iovalue(self, iovalue):
+        return {'a': {'b': iovalue}}
 
 
 
@@ -323,6 +333,18 @@ class TestVerifyStructureListIOSpec(
     
     def make_iovalue(self, length, maker=object):
         return [maker() for i in range(length)]
+
+class TestVerifyStructureTupleIOSpec(
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureUnlimitedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return tuple([object for i in range(length)])
+    
+    def make_iovalue(self, length, maker=object):
+        return tuple([maker() for i in range(length)])
 
 class TestVerifyStructureDictIOSpec(
     VerifyStructureBasicTest,
@@ -481,6 +503,16 @@ class TestCoerceListIOSpec(CoercionTest, CoercionTestCase):
     
     def wrap_iovalue(self, iovalue):
         return [iovalue]
+    
+    def retrieve_result(self, coercion_result):
+        return coercion_result[0]
+
+class TestCoerceTupleIOSpec(CoercionTest, CoercionTestCase):
+    def wrap_iospec(self, iospec):
+        return tuple([iospec])
+    
+    def wrap_iovalue(self, iovalue):
+        return tuple([iovalue])
     
     def retrieve_result(self, coercion_result):
         return coercion_result[0]
