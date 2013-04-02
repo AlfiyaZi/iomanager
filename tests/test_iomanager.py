@@ -905,60 +905,6 @@ class TypeCheckingTest(unittest.TestCase):
     class InvalidType(object):
         """ A custom type for testing type-checking. """
 
-class TestTypeCheckingBasic(TypeCheckingTest):
-    def get_process_result(
-        self,
-        value,
-        iospec_kind='required',
-        expected_type=None
-        ):
-        if expected_type is None:
-            expected_type = self.CustomType
-        
-        ioprocessor = IOProcessor()
-        ioprocessor.verify(
-            iovalue={'a': value},
-            **{iospec_kind: {'a': expected_type}}
-            )
-    
-    def process_passes_test(self, *pargs, **kwargs):
-        self.get_process_result(*pargs, **kwargs)
-    
-    def process_raises_test(self, *pargs, **kwargs):
-        with pytest.raises(VerificationFailureError):
-            self.process_passes_test(*pargs, **kwargs)
-    
-    def test_invalid_type_raises_required(self):
-        self.process_raises_test(self.InvalidType(), 'required')
-    
-    def test_invalid_type_raises_optional(self):
-        self.process_raises_test(self.InvalidType(), 'optional')
-    
-    def test_none_value_passes(self):
-        self.process_passes_test(None)
-    
-    def test_correct_type_passes(self):
-        self.process_passes_test(self.CustomType())
-    
-    def test_correct_type_passes_subclass(self):
-        """ Confirm that an instance of a subclass of the specified type passes
-            coercion.
-            
-            In order to change this behavior to reject subclasses, the user
-            should use the 'type_checking_functions' attribute. """
-        self.process_passes_test(self.CustomSubclassType())
-    
-    def test_anytype_accepts_anything(self):
-        """ The 'AnyType' type should accept values of any type. """
-        class ArbitraryType(object):
-            """ An arbitrary value type. """
-        
-        arbitrary_value = ArbitraryType()
-        self.process_passes_test(
-            value=ArbitraryType(),
-            expected_type=iomanager.AnyType,
-            )
-
 class TypeCheckingExtendedTest(object):
     def call_process_method(self, value):
         ioprocessor = IOProcessor()
