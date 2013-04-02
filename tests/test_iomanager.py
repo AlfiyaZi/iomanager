@@ -47,20 +47,19 @@ class CoercionTest(unittest.TestCase):
 
 # ------------------- Non-container 'iovalue' tests --------------------
 
-class TestNonContainerIOValueVerify(unittest.TestCase):
+class NonContainerTypeCheckTest(unittest.TestCase):
     class CustomType(object):
         """ A custom type for testing. """
     
-    def setUp(self):
-        self.ioprocessor = IOProcessor()
-    
+
+class TestNonContainerVerifyTypeCheck(NonContainerTypeCheckTest):
     def test_no_iospec_passes(self):
-        self.ioprocessor.verify(
+        IOProcessor().verify(
             iovalue=object()
             )
     
     def correct_type_passes_test(self, parameter_name):
-        self.ioprocessor.verify(
+        IOProcessor().verify(
             iovalue=object(),
             **{parameter_name: object}
             )
@@ -73,7 +72,7 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
     
     def wrong_type_raises_test(self, parameter_name):
         with pytest.raises(VerificationFailureError):
-            self.ioprocessor.verify(
+            IOProcessor().verify(
                 iovalue=object(),
                 **{parameter_name: self.CustomType}
                 )
@@ -85,7 +84,7 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
         self.wrong_type_raises_test('optional')
     
     def none_value_passes_test(self, parameter_name):
-        self.ioprocessor.verify(
+        IOProcessor().verify(
             iovalue=None,
             **{parameter_name: object}
             )
@@ -96,19 +95,32 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
     def test_none_value_passes_optional(self):
         self.none_value_passes_test('optional')
     
+    def anytype_passes_test(self, parameter_name):
+        IOProcessor().verify(
+            iovalue=object(),
+            **{parameter_name: iomanager.AnyType}
+            )
+    
+    def test_anytype_passes_required(self):
+        self.anytype_passes_test('required')
+    
+    def test_anytype_passes_optional(self):
+        self.anytype_passes_test('optional')
+    
     def test_required_overrides_optional(self):
-        self.ioprocessor.verify(
+        IOProcessor().verify(
             iovalue=object(),
             required=object,
             optional=self.CustomType,
             )
-    
+
+class TestNonContainerVerifyStructure(NonContainerTypeCheckTest):
+    """ When dealing with non-container 'iospec' values, there is not much
+        structure to-be-verified. This case only needs to test that 'unlimited'
+        is ignored when non-container types are involved. """
     def unlimited_ignored_test(self, parameter_name):
-        """ When using non-container 'iovalue' and 'iospec' values, the
-            'unlimited' parameter is ignored. 'unlimited' only applies to 'dict'
-            and 'list' iospecs. """
         with pytest.raises(VerificationFailureError):
-            self.ioprocessor.verify(
+            IOProcessor().verify(
                 iovalue=object(),
                 unlimited=True,
                 **{parameter_name: self.CustomType}
