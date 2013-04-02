@@ -372,10 +372,7 @@ class IOProcessor(object):
         required=NotProvided,
         optional=NotProvided,
         ):
-        required_iospec = required
-        optional_iospec = optional
-        
-        combined_iospec = combine_iospecs(required_iospec, optional_iospec)
+        combined_iospec = combine_iospecs(required, optional)
         
         return self.coerce_ioval(iovalue, combined_iospec)
     

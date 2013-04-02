@@ -2,6 +2,7 @@
 
 import pytest
 import unittest
+import string
 
 import iomanager
 from iomanager import (
@@ -27,23 +28,6 @@ class CustomType(object):
 class CustomSubclassType(CustomType):
     """ A custom type used for testing type-checking. """
 
-class CoercionTest(unittest.TestCase):
-    class BeforeCoercionType(object):
-        """ A type that coerces to YesCoercionType. """
-    
-    class YesCoercionType(object):
-        """ A type with a custom coercion function. """
-    
-    def coerce_custom(self, value):
-        if isinstance(value, self.BeforeCoercionType):
-            return self.YesCoercionType()
-        return value
-    
-    def setUp(self):
-        self.ioprocessor = IOProcessor(
-            coercion_functions={self.YesCoercionType: self.coerce_custom}
-            )
-
 # --------------------------- Baseline tests ---------------------------
 
 class TestVerifyNoIOSpec(unittest.TestCase):
@@ -54,9 +38,9 @@ class TestVerifyNoIOSpec(unittest.TestCase):
             iovalue=object()
             )
 
-class TestCoerceNoIOSpec(CoercionTest):
+class TestCoerceNoIOSpec(unittest.TestCase):
     def test_no_iospec_passes(self):
-        self.ioprocessor.coerce(
+        IOProcessor().coerce(
             iovalue=object()
             )
 
@@ -441,6 +425,23 @@ class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
 
 # --------------------------- Coercion tests ---------------------------
 
+class CoercionTest(unittest.TestCase):
+    class BeforeCoercionType(object):
+        """ A type that coerces to YesCoercionType. """
+    
+    class YesCoercionType(object):
+        """ A type with a custom coercion function. """
+    
+    def coerce_custom(self, value):
+        if isinstance(value, self.BeforeCoercionType):
+            return self.YesCoercionType()
+        return value
+    
+    def setUp(self):
+        self.ioprocessor = IOProcessor(
+            coercion_functions={self.YesCoercionType: self.coerce_custom}
+            )
+
 class TestCoerceNonContainerIOSpec(CoercionTest):
     def no_coercion_test(self, parameter_name):
         uncoerced_value = self.BeforeCoercionType()
@@ -482,6 +483,49 @@ class TestCoerceNonContainerIOSpec(CoercionTest):
             )
         
         assert result is uncoerced_value
+
+class TestCoercionContainersPreserved(unittest.TestCase):
+    def preservation_test(self, parameter_name, initial, expected, iospec):
+        result = IOProcessor().coerce(
+            iovalue=initial,
+            **{parameter_name: iospec}
+            )
+        
+        assert result == expected
+    
+    def dict_preserved_test(self, parameter_name):
+        keys = string.lowercase
+        initial = {ikey: object() for ikey in keys}
+        expected = initial.copy()
+        iospec = {ikey: object for ikey in keys}
+        
+        self.preservation_test(parameter_name, initial, expected, iospec)
+    
+    def test_dict_preserved_required(self):
+        self.dict_preserved_test('required')
+    
+    def test_dict_preserved_optional(self):
+        self.dict_preserved_test('optional')
+    
+    def list_preserved_test(self, parameter_name):
+        """ When a list is provided as an 'iovalue' value, its length and order
+            are preserved.
+            
+            It is important that the list in this test case is not in a
+            'naturally-sorted' order. Otherwise, the coercion function wouldn't
+            need to preserve the input order; it would only need to call
+            'sorted()' on the result, and it could get lucky. """
+        initial = list(u'aWMp8CAjRjMd039Hy1o4fLCv0RsVZxTB')
+        expected = list(initial)
+        iospec = [object for i in initial]
+        
+        self.preservation_test(parameter_name, initial, expected, iospec)
+    
+    def test_list_preserved_required(self):
+        self.list_preserved_test('required')
+    
+    def test_list_preserved_optional(self):
+        self.list_preserved_test('optional')
 
 
 
