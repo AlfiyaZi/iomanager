@@ -26,6 +26,10 @@ class ConfirmationError(Error):
     """ Raised to confirm that a particular function or method has been
         called. """
 
+class CustomTypeTest(unittest.TestCase):
+    class CustomType(object):
+        """ A custom type for testing. """
+
 class CoercionTest(unittest.TestCase):
     class BeforeCoercionType(object):
         """ A type that coerces to YesCoercionType. """
@@ -46,13 +50,9 @@ class CoercionTest(unittest.TestCase):
 
 
 # ------------------- Non-container 'iovalue' tests --------------------
-
-class NonContainerTypeCheckTest(unittest.TestCase):
-    class CustomType(object):
-        """ A custom type for testing. """
     
 
-class TestNonContainerVerifyTypeCheck(NonContainerTypeCheckTest):
+class TestNonContainerVerifyTypeCheck(CustomTypeTest):
     def test_no_iospec_passes(self):
         IOProcessor().verify(
             iovalue=object()
@@ -114,7 +114,40 @@ class TestNonContainerVerifyTypeCheck(NonContainerTypeCheckTest):
             optional=self.CustomType,
             )
 
-class TestNonContainerVerifyStructure(NonContainerTypeCheckTest):
+@pytest.mark.a
+class TestNonContainerVerifyTypeCheckCustomFunction(CustomTypeTest):
+    """ Confirm type checking behavior when custom type-checking functions are
+        in use. """
+    def verify_test(self, value, custom_function):
+        ioprocessor = IOProcessor(
+            typecheck_functions={self.CustomType: custom_function}
+            )
+        ioprocessor.verify(
+            iovalue=value,
+            required=self.CustomType
+            )
+    
+    def test_type_check_failure_error(self):
+        """ When a custom type-checking function raises a TypeCheckFailureError,
+            type checking fails even if the value would have passed type
+            checking normally.
+            
+            This can be used for 'subclass rejection'. For example: 'int' type
+            rejects 'bool' values. """
+        def reject_value(value, expected_type):
+            raise TypeCheckFailureError
+        with pytest.raises(VerificationFailureError):
+            self.verify_test(self.CustomType(), reject_value)
+    
+    def test_type_check_success_error(self):
+        """ When a custom type-checking function raises a TypeCheckSuccessError,
+            type checking passes even if the value would have been rejected
+            normally. """
+        def accept_value(value, expected_type):
+            raise TypeCheckSuccessError
+        self.verify_test(object(), accept_value)
+
+class TestNonContainerVerifyStructure(CustomTypeTest):
     """ When dealing with non-container 'iospec' values, there is not much
         structure to-be-verified. This case only needs to test that 'unlimited'
         is ignored when non-container types are involved. """
@@ -955,44 +988,6 @@ class TestTypeCheckingListOf(TypeCheckingTest, TypeCheckingExtendedTest):
     
     def make_extended_iospec(self):
         return iomanager.ListOf(self.CustomType)
-
-class TestTypeCheckingCustomFunction(TypeCheckingTest):
-    """ Confirm type checking behavior when custom type-checking functions are
-        in use. """
-    def get_process_result(self, value, custom_function):
-        ioprocessor = IOProcessor(
-            typecheck_functions={self.CustomType: custom_function}
-            )
-        ioprocessor.verify(
-            iovalue={'a': value},
-            required={'a': self.CustomType}
-            )
-    
-    def process_passes_test(self, *pargs):
-        self.get_process_result(*pargs)
-    
-    def process_raises_test(self, *pargs):
-        with pytest.raises(VerificationFailureError):
-            self.process_passes_test(*pargs)
-    
-    def test_type_check_failure_error(self):
-        """ When a custom type-checking function raises a TypeCheckFailureError,
-            type checking fails even if the value would have passed type
-            checking normally.
-            
-            This can be used for 'subclass rejection'. For example: 'int' type
-            rejects 'bool' values. """
-        def reject_value(value, expected_type):
-            raise TypeCheckFailureError
-        self.process_raises_test(self.CustomType(), reject_value)
-    
-    def test_type_check_success_error(self):
-        """ When a custom type-checking function raises a TypeCheckSuccessError,
-            type checking passes even if the value would have been rejected
-            normally. """
-        def accept_value(value, expected_type):
-            raise TypeCheckSuccessError
-        self.process_passes_test(self.InvalidType(), accept_value)
 
 
 
