@@ -118,7 +118,13 @@ class WrongTypePair(object):
         self.pair = (type_obj, type(arg_value))
     
     def __repr__(self):
-        type_names = [item.__name__ for item in self.pair]
+        type_names = []
+        for item in self.pair:
+            try:
+                type_names.append(item.__name__)
+            except AttributeError:
+                type_names.append(type(item).__name__)
+        
         return "(expected '{}'; got '{}')".format(*type_names)
 
 class TypeNameRepresentation(object):
@@ -189,7 +195,7 @@ class IOProcessor(object):
                 ('Not allowed: ', unknown),
                 ('Wrong type: ', wrong_types),
                 ]
-            if output_part
+            if output_part and output_part is not NoDifference
             ]
         
         err_msg = ('Invalid RPC arguments.\n' + '\n'.join(err_msg_parts))
@@ -205,7 +211,7 @@ class IOProcessor(object):
         if all_are_instances((item_a, item_b), dict):
             return self.difference_dict(item_a, item_b, result_modifier)
         
-        if all_are_instances((item_a, item_b), (list, ListOf)):
+        if all_are_instances((item_a, item_b), (list, tuple, ListOf)):
             return self.difference_list(item_a, item_b, result_modifier)
         
         if item_b is NotProvided:
@@ -296,7 +302,7 @@ class IOProcessor(object):
             self.confirm_type_dict(ioval, expected_type)
             return
         
-        if isinstance(expected_type, (list, ListOf)):
+        if isinstance(expected_type, (list, tuple, ListOf)):
             self.confirm_type_list(ioval, expected_type)
             return
         
@@ -312,6 +318,10 @@ class IOProcessor(object):
                 return
             except TypeCheckFailureError:
                 raise WrongTypeError(expected_type, ioval)
+        
+        # Catch 'None' values.
+        if ioval is None and not nonetype_ok:
+            raise WrongTypeError(expected_type, ioval)
         
         # General case.
         if (
@@ -344,12 +354,12 @@ class IOProcessor(object):
             raise WrongTypeDictError(wrong_types)
     
     def confirm_type_list(self, iovals_list, iospec_obj):
-        """ 'None' values are not permitted in lists.
+        """ 'None' values are not permitted when ListOf is expected.
             
             An attribute called 'lists_allow_none_values' is being considered
             to allow modification of this behavior. """
-        if not isinstance(iovals_list, list):
-            raise WrongTypeError(list, iovals_list)
+        if not isinstance(iovals_list, (list, tuple)):
+            raise WrongTypeError(iospec_obj, iovals_list)
         
         iovals_dict = make_dict_from_list(iovals_list)
         
@@ -358,7 +368,9 @@ class IOProcessor(object):
         else:
             iospec = make_dict_from_list(iospec_obj)
         
-        self.confirm_type_dict(iovals_dict, iospec, nonetype_ok=False)
+        nonetype_ok = not isinstance(iospec_obj, ListOf)
+        
+        self.confirm_type_dict(iovals_dict, iospec, nonetype_ok=nonetype_ok)
     
     def coerce(
         self,
@@ -366,10 +378,7 @@ class IOProcessor(object):
         required=NotProvided,
         optional=NotProvided,
         ):
-        required_iospec = required
-        optional_iospec = optional
-        
-        combined_iospec = combine_iospecs(required_iospec, optional_iospec)
+        combined_iospec = combine_iospecs(required, optional)
         
         return self.coerce_ioval(iovalue, combined_iospec)
     
@@ -378,7 +387,7 @@ class IOProcessor(object):
         if isinstance(expected_type, dict):
             return self.coerce_dict(ioval, expected_type)
         
-        if isinstance(expected_type, (list, ListOf)):
+        if isinstance(expected_type, (list, tuple, ListOf)):
             return self.coerce_list(ioval, expected_type)
         
         # Coerce non-container types.
@@ -412,7 +421,6 @@ class IOProcessor(object):
             iospec = iospec_obj.make_dict(len(iovals_list))
         else:
             iospec = make_dict_from_list(iospec_obj)
-        print iospec
         
         result_dict = self.coerce_dict(iovals_dict, iospec)
         
@@ -568,6 +576,9 @@ def combine_iospecs(iospec_a=NotProvided, iospec_b=NotProvided):
     if all_are_instances((iospec_a, iospec_b), dict):
         return combine_iospecs_dict(iospec_a, iospec_b)
     
+    if all_are_instances((iospec_a, iospec_b), (list, tuple)):
+        return combine_iospecs_list(iospec_a, iospec_b)
+    
     if iospec_a is NotProvided:
         if iospec_b is NotProvided:
             return AnyType
@@ -584,6 +595,14 @@ def combine_iospecs_dict(iospec_a, iospec_b):
             )
         for ikey in all_keys
         }
+
+def combine_iospecs_list(iospec_list_a, iospec_list_b):
+    iospec_a = make_dict_from_list(iospec_list_a)
+    iospec_b = make_dict_from_list(iospec_list_b)
+    
+    result_dict = combine_iospecs_dict(iospec_a, iospec_b)
+    
+    return [result_dict[i] for i in sorted(result_dict.iterkeys())]
 
 def make_missing_output(iospec):
     if iospec is NoDifference:
