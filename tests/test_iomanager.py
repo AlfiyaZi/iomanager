@@ -26,9 +26,11 @@ class ConfirmationError(Error):
     """ Raised to confirm that a particular function or method has been
         called. """
 
-class CustomTypeTest(unittest.TestCase):
-    class CustomType(object):
-        """ A custom type for testing. """
+class CustomType(object):
+    """ A custom type used for testing type-checking. """
+
+class CustomSubclassType(CustomType):
+    """ A custom type used for testing type-checking. """
 
 class CoercionTest(unittest.TestCase):
     class BeforeCoercionType(object):
@@ -52,7 +54,7 @@ class CoercionTest(unittest.TestCase):
 # ------------------- Non-container 'iovalue' tests --------------------
     
 
-class TestNonContainerVerifyTypeCheck(CustomTypeTest):
+class TestNonContainerVerifyTypeCheck(unittest.TestCase):
     def test_no_iospec_passes(self):
         IOProcessor().verify(
             iovalue=object()
@@ -70,11 +72,23 @@ class TestNonContainerVerifyTypeCheck(CustomTypeTest):
     def test_correct_type_passes_optional(self):
         self.correct_type_passes_test('optional')
     
+    def correct_type_subclass_passes_test(self, parameter_name):
+        IOProcessor().verify(
+            iovalue=CustomSubclassType(),
+            **{parameter_name: CustomType}
+            )
+    
+    def test_correct_type_subclass_passes_required(self):
+        self.correct_type_subclass_passes_test('required')
+    
+    def test_correct_type_subclass_passes_optional(self):
+        self.correct_type_subclass_passes_test('optional')
+    
     def wrong_type_raises_test(self, parameter_name):
         with pytest.raises(VerificationFailureError):
             IOProcessor().verify(
                 iovalue=object(),
-                **{parameter_name: self.CustomType}
+                **{parameter_name: CustomType}
                 )
     
     def test_wrong_type_raises_required(self):
@@ -111,20 +125,20 @@ class TestNonContainerVerifyTypeCheck(CustomTypeTest):
         IOProcessor().verify(
             iovalue=object(),
             required=object,
-            optional=self.CustomType,
+            optional=CustomType,
             )
 
 @pytest.mark.a
-class TestNonContainerVerifyTypeCheckCustomFunction(CustomTypeTest):
+class TestNonContainerVerifyTypeCheckCustomFunction(unittest.TestCase):
     """ Confirm type checking behavior when custom type-checking functions are
         in use. """
     def verify_test(self, value, custom_function):
         ioprocessor = IOProcessor(
-            typecheck_functions={self.CustomType: custom_function}
+            typecheck_functions={CustomType: custom_function}
             )
         ioprocessor.verify(
             iovalue=value,
-            required=self.CustomType
+            required=CustomType
             )
     
     def test_type_check_failure_error(self):
@@ -137,7 +151,7 @@ class TestNonContainerVerifyTypeCheckCustomFunction(CustomTypeTest):
         def reject_value(value, expected_type):
             raise TypeCheckFailureError
         with pytest.raises(VerificationFailureError):
-            self.verify_test(self.CustomType(), reject_value)
+            self.verify_test(CustomType(), reject_value)
     
     def test_type_check_success_error(self):
         """ When a custom type-checking function raises a TypeCheckSuccessError,
@@ -147,7 +161,7 @@ class TestNonContainerVerifyTypeCheckCustomFunction(CustomTypeTest):
             raise TypeCheckSuccessError
         self.verify_test(object(), accept_value)
 
-class TestNonContainerVerifyStructure(CustomTypeTest):
+class TestNonContainerVerifyStructure(unittest.TestCase):
     """ When dealing with non-container 'iospec' values, there is not much
         structure to-be-verified. This case only needs to test that 'unlimited'
         is ignored when non-container types are involved. """
@@ -156,7 +170,7 @@ class TestNonContainerVerifyStructure(CustomTypeTest):
             IOProcessor().verify(
                 iovalue=object(),
                 unlimited=True,
-                **{parameter_name: self.CustomType}
+                **{parameter_name: CustomType}
                 )
     
     def test_unlimited_ignored_required(self):
