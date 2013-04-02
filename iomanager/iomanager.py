@@ -162,13 +162,8 @@ class IOProcessor(object):
         missing = self.difference_ioval(required_iospec, iovalue)
         unknown = self.difference_ioval(iovalue, combined_iospec)
         
-        if unlimited and all_are_instances((unknown, combined_iospec), dict):
-            """ When unlimited=True, top-level keys are unlimited. """
-            for ikey in unknown.keys():
-                if ikey not in combined_iospec:
-                    del unknown[ikey]
-            if not unknown:
-                unknown = NoDifference
+        if unlimited:
+            unknown = self.filter_unlimited(unknown, combined_iospec)
         
         try:
             self.confirm_type_ioval(iovalue, combined_iospec)
@@ -268,6 +263,30 @@ class IOProcessor(object):
         
         return self.difference_dict(dict_a, dict_b, *pargs, **kwargs)
     
+    def filter_unlimited(self, unknown, combined_iospec):
+        """ Take the 'unlimited' argument into account. Only keys in the
+            intersection of 'unknown' and 'iospec_dict' are considered unknown
+            when 'unlimited=True'.
+            
+            In other words, when unlimited=True, top-level keys (and only
+            top-level keys) are unlimited."""
+        if unknown is NoDifference:
+            return NoDifference
+        
+        if isinstance(combined_iospec, list):
+            iospec_dict = make_dict_from_list(combined_iospec)
+        else:
+            iospec_dict = combined_iospec
+        
+        result = {
+            ikey: ivalue for ikey, ivalue in unknown.iteritems()
+            if ikey in iospec_dict
+            }
+        
+        if not result:
+            return NoDifference
+        return result
+    
     def confirm_type_ioval(self, ioval, expected_type, nonetype_ok=True):
         if expected_type is NotProvided:
             expected_type = AnyType
@@ -304,17 +323,17 @@ class IOProcessor(object):
         
         raise WrongTypeError(expected_type, ioval)
     
-    def confirm_type_dict(self, iovals_dict, iospec, nonetype_ok=True):
+    def confirm_type_dict(self, iovals_dict, iospec_dict, nonetype_ok=True):
         if not isinstance(iovals_dict, dict):
             raise WrongTypeError(dict, iovals_dict)
         
         wrong_types = {}
         
         for key, ioval in iovals_dict.items():
-            if key not in iospec:
+            if key not in iospec_dict:
                 continue
             
-            expected_type = iospec[key]
+            expected_type = iospec_dict[key]
             
             try:
                 self.confirm_type_ioval(ioval, expected_type, nonetype_ok)

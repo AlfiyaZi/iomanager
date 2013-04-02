@@ -59,30 +59,30 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
             iovalue=object()
             )
     
-    def object_passes_test(self, parameter_name):
+    def correct_type_passes_test(self, parameter_name):
         self.ioprocessor.verify(
             iovalue=object(),
             **{parameter_name: object}
             )
     
-    def test_required_passes(self):
-        self.object_passes_test('required')
+    def test_correct_type_passes_required(self):
+        self.correct_type_passes_test('required')
     
-    def test_optional_passes(self):
-        self.object_passes_test('optional')
+    def test_correct_type_passes_optional(self):
+        self.correct_type_passes_test('optional')
     
-    def object_raises_test(self, parameter_name):
+    def wrong_type_raises_test(self, parameter_name):
         with pytest.raises(VerificationFailureError):
             self.ioprocessor.verify(
                 iovalue=object(),
                 **{parameter_name: self.CustomType}
                 )
     
-    def test_required_raises(self):
-        self.object_raises_test('required')
+    def test_wrong_type_raises_required(self):
+        self.wrong_type_raises_test('required')
     
-    def test_optional_raises(self):
-        self.object_raises_test('optional')
+    def test_wrong_type_raises_optional(self):
+        self.wrong_type_raises_test('optional')
     
     def none_value_passes_test(self, parameter_name):
         self.ioprocessor.verify(
@@ -90,10 +90,10 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
             **{parameter_name: object}
             )
     
-    def test_required_none_value_passes(self):
+    def test_none_value_passes_required(self):
         self.none_value_passes_test('required')
     
-    def test_optional_none_value_passes(self):
+    def test_none_value_passes_optional(self):
         self.none_value_passes_test('optional')
     
     def test_required_overrides_optional(self):
@@ -114,10 +114,10 @@ class TestNonContainerIOValueVerify(unittest.TestCase):
                 **{parameter_name: self.CustomType}
                 )
     
-    def test_required_unlimited_ignored(self):
+    def test_unlimited_ignored_required(self):
         self.unlimited_ignored_test('required')
     
-    def test_optional_unlimited_ignored(self):
+    def test_unlimited_ignored_optional(self):
         self.unlimited_ignored_test('optional')
 
 class TestNonContainerIOValueCoerce(CoercionTest):
@@ -226,11 +226,9 @@ class TestIOSpecListVerify(unittest.TestCase):
             **{parameter_name: []}
             )
     
-    @pytest.mark.a
     def test_unlimited_required(self):
         self.unlimited_test('required')
     
-    @pytest.mark.a
     def test_unlimited_optional(self):
         self.unlimited_test('optional')
 
@@ -359,7 +357,7 @@ class VerificationTest(unittest.TestCase):
             unlimited=False,
             )
 
-class BasicTspecTest(VerificationTest):
+class BasicIOSpecTest(VerificationTest):
     @classmethod
     def required_iovals(cls):
         return dict(a=0, b=1, c=2)
@@ -382,7 +380,7 @@ class BasicTspecTest(VerificationTest):
         result.update(cls.optional_iovals())
         return result
 
-class TestRequiredTspec(BasicTspecTest):
+class TestRequiredIOSpec(BasicIOSpecTest):
     def trial_iospecs(self):
         return dict(
             required=self.required_iospec()
@@ -401,7 +399,7 @@ class TestRequiredTspec(BasicTspecTest):
         iovals['x'] = 9
         self.bad_iovals_test(iovals)
 
-class TestOptionalTspec(BasicTspecTest):
+class TestOptionalIOSpec(BasicIOSpecTest):
     def trial_iospecs(self):
         return dict(optional=self.optional_iospec())
     
@@ -418,7 +416,7 @@ class TestOptionalTspec(BasicTspecTest):
         iovals['x'] = 9
         self.bad_iovals_test(iovals)
 
-class TestUnlimitedIOVals(BasicTspecTest):
+class TestUnlimitedIOVals(BasicIOSpecTest):
     def trial_iospecs(self):
         return dict(unlimited=True)
     
@@ -430,7 +428,7 @@ class TestUnlimitedIOVals(BasicTspecTest):
         iovals = dict(zip(keys, range(len(keys))))
         self.good_iovals_test(iovals)
 
-class TestRequiredAndOptionalBoth(BasicTspecTest):
+class TestRequiredAndOptionalBoth(BasicIOSpecTest):
     def trial_iospecs(self):
         return dict(
             required=self.required_iospec(),
