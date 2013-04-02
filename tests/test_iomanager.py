@@ -171,7 +171,6 @@ class TestNonContainerIOValueCoerce(CoercionTest):
 
 # ---------------------- List-value IOSpec tests -----------------------
 
-@pytest.mark.a
 class TestIOSpecListVerify(unittest.TestCase):
     def setUp(self):
         self.ioprocessor = IOProcessor()
@@ -190,13 +189,6 @@ class TestIOSpecListVerify(unittest.TestCase):
     
     def test_optional_passes(self):
         self.good_iovalue_passes_test('optional')
-    
-    def test_tuple_passes(self):
-        """ Confirm that tuples are treated the same as lists. """
-        self.parameter_test(
-            'required',
-            (object(), )
-            )
     
     def extra_item_raises_test(self, parameter_name):
         with pytest.raises(VerificationFailureError):
@@ -239,6 +231,10 @@ class TestIOSpecListVerify(unittest.TestCase):
     
     def test_unlimited_optional(self):
         self.unlimited_test('optional')
+
+class TestIOSpecTupleVerify(unittest.TestCase):
+    """ Confirm that tuples are treated the same as lists, both when used as
+        'iospec' and 'iovalue'. """
 
 @pytest.mark.a
 class TestIOSpecListCoerce(CoercionTest):

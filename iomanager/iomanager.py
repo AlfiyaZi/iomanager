@@ -237,13 +237,34 @@ class IOProcessor(object):
         
         return NoDifference
     
-    def difference_list(self, list_obj_a, list_obj_b, *pargs, **kwargs):
-        if isinstance(list_obj_a, list):
-            dict_a = make_dict_from_list(list_obj_a)
-            dict_b = list_obj_b.make_dict(len(list_obj_a))
+    def difference_list(self, list_a, list_b, *pargs, **kwargs):
+        """ The difference between two lists, or between a list and a
+            ListOf. """
+        list_objs = {0: list_a, 1: list_b}
+        
+        for i in list_objs:
+            k = 1 - i
+            this = list_objs[i]
+            other = list_objs[k]
+            
+            if not isinstance(this, ListOf):
+                continue
+            
+            dict_objs = {
+                i: this.make_dict(len(other)),
+                k: make_dict_from_list(other)
+                }
+            
+            break
+            
         else:
-            dict_a = list_obj_a.make_dict(len(list_obj_b))
-            dict_b = make_dict_from_list(list_obj_b)
+            dict_objs = {
+                ikey: make_dict_from_list(ivalue)
+                for ikey, ivalue in list_objs.iteritems()
+                }
+        
+        dict_a = dict_objs[0]
+        dict_b = dict_objs[1]
         
         return self.difference_dict(dict_a, dict_b, *pargs, **kwargs)
     
@@ -256,7 +277,7 @@ class IOProcessor(object):
             self.confirm_type_dict(ioval, expected_type)
             return
         
-        if isinstance(expected_type, ListOf):
+        if isinstance(expected_type, (list, ListOf)):
             self.confirm_type_list(ioval, expected_type)
             return
         
@@ -303,7 +324,7 @@ class IOProcessor(object):
         if wrong_types:
             raise WrongTypeDictError(wrong_types)
     
-    def confirm_type_list(self, iovals_list, listof):
+    def confirm_type_list(self, iovals_list, iospec_obj):
         """ 'None' values are not permitted in lists.
             
             An attribute called 'lists_allow_none_values' is being considered
@@ -312,7 +333,11 @@ class IOProcessor(object):
             raise WrongTypeError(list, iovals_list)
         
         iovals_dict = make_dict_from_list(iovals_list)
-        iospec = listof.make_dict(len(iovals_list))
+        
+        if isinstance(iospec_obj, ListOf):
+            iospec = iospec_obj.make_dict(len(iovals_list))
+        else:
+            iospec = make_dict_from_list(iospec_obj)
         
         self.confirm_type_dict(iovals_dict, iospec, nonetype_ok=False)
     
