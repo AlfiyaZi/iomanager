@@ -425,7 +425,7 @@ class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
 
 # --------------------------- Coercion tests ---------------------------
 
-class CoercionTest(unittest.TestCase):
+class CoercionTestCase(unittest.TestCase):
     class BeforeCoercionType(object):
         """ A type that coerces to YesCoercionType. """
     
@@ -442,14 +442,16 @@ class CoercionTest(unittest.TestCase):
             coercion_functions={self.YesCoercionType: self.coerce_custom}
             )
 
-class TestCoerceNonContainerIOSpec(CoercionTest):
+class CoercionTest(object):
     def no_coercion_test(self, parameter_name):
         uncoerced_value = self.BeforeCoercionType()
         
-        result = self.ioprocessor.coerce(
-            iovalue=uncoerced_value,
-            **{parameter_name: object}
+        coercion_result = self.ioprocessor.coerce(
+            iovalue=self.wrap_iovalue(uncoerced_value),
+            **{parameter_name: self.wrap_iospec(object)}
             )
+        
+        result = self.retrieve_result(coercion_result)
         
         assert result is uncoerced_value
     
@@ -460,10 +462,12 @@ class TestCoerceNonContainerIOSpec(CoercionTest):
         self.no_coercion_test('optional')
     
     def yes_coercion_test(self, parameter_name):
-        result = self.ioprocessor.coerce(
-            iovalue=self.BeforeCoercionType(),
-            **{parameter_name: self.YesCoercionType}
+        coercion_result = self.ioprocessor.coerce(
+            iovalue=self.wrap_iovalue(self.BeforeCoercionType()),
+            **{parameter_name: self.wrap_iospec(self.YesCoercionType)}
             )
+        
+        result = self.retrieve_result(coercion_result)
         
         assert isinstance(result, self.YesCoercionType)
     
@@ -476,13 +480,65 @@ class TestCoerceNonContainerIOSpec(CoercionTest):
     def test_required_overrides_optional(self):
         uncoerced_value = self.BeforeCoercionType()
         
-        result = self.ioprocessor.coerce(
-            iovalue=uncoerced_value,
-            required=object,
-            optional=self.YesCoercionType,
+        coercion_result = self.ioprocessor.coerce(
+            iovalue=self.wrap_iovalue(uncoerced_value),
+            required=self.wrap_iospec(self.YesCoercionType),
+            optional=self.wrap_iospec(object),
             )
         
-        assert result is uncoerced_value
+        result = self.retrieve_result(coercion_result)
+        
+        assert isinstance(result, self.YesCoercionType)
+
+class TestCoerceNonContainerIOSpec(CoercionTest, CoercionTestCase):
+    def wrap_iospec(self, iospec):
+        return iospec
+    
+    def wrap_iovalue(self, iovalue):
+        return iovalue
+    
+    def retrieve_result(self, coercion_result):
+        return coercion_result
+
+class TestCoerceListIOSpec(CoercionTest, CoercionTestCase):
+    def wrap_iospec(self, iospec):
+        return [iospec]
+    
+    def wrap_iovalue(self, iovalue):
+        return [iovalue]
+    
+    def retrieve_result(self, coercion_result):
+        return coercion_result[0]
+
+class TestCoerceDictIOSpec(CoercionTest, CoercionTestCase):
+    def wrap_iospec(self, iospec):
+        return {'a': iospec}
+    
+    def wrap_iovalue(self, iovalue):
+        return {'a': iovalue}
+    
+    def retrieve_result(self, coercion_result):
+        return coercion_result['a']
+
+class TestCoerceListOfIOSpec(CoercionTest, CoercionTestCase):
+    def wrap_iospec(self, iospec):
+        return iomanager.ListOf(iospec)
+    
+    def wrap_iovalue(self, iovalue):
+        return [iovalue]
+    
+    def retrieve_result(self, coercion_result):
+        return coercion_result[0]
+
+class TestCoerceNestedIOSpec(CoercionTest, CoercionTestCase):
+    def wrap_iospec(self, iospec):
+        return {'a': {'b': iospec}}
+    
+    def wrap_iovalue(self, iovalue):
+        return {'a': {'b': iovalue}}
+    
+    def retrieve_result(self, coercion_result):
+        return coercion_result['a']['b']
 
 class TestCoercionContainersPreserved(unittest.TestCase):
     def preservation_test(self, parameter_name, initial, expected, iospec):
@@ -535,7 +591,7 @@ class TestIOSpecTupleVerify(unittest.TestCase):
     """ Confirm that tuples are treated the same as lists, both when used as
         'iospec' and 'iovalue'. """
 
-class TestIOSpecListCoerce(CoercionTest):
+class TestIOSpecListCoerce(CoercionTestCase):
     def coercion_test(self, parameter_name):
         result_list = self.ioprocessor.coerce(
             iovalue=[self.BeforeCoercionType()],
