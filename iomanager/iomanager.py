@@ -454,29 +454,6 @@ class IOProcessor(object):
 
 class IOManager(object):
     def __init__(self, **kwargs):
-        attr_names = [
-            'coercion_functions',
-            'input_coercion_functions',
-            'output_coercion_functions',
-            'typecheck_functions',
-            'input_typecheck_functions',
-            'output_typecheck_functions',
-            ]
-        
-        attributes = {}
-        
-        for ikey, ivalue in kwargs.iteritems():
-            if ikey not in attr_names:
-                raise TypeError(
-                    "__init__() got an unexpected keyword argument '{}'"
-                    .format(ikey)
-                    )
-            attributes[ikey] = ivalue
-        
-        for attr_name, attr_value in attributes.iteritems():
-            setattr(self, attr_name, attr_value)
-    
-    def __init__(self, **kwargs):
         keys = [
             'coercion_functions',
             'typecheck_functions',
@@ -499,26 +476,66 @@ class IOManager(object):
                     .format(ikey)
                     )
         
+        #input_kwargs, output_kwargs = [
+        #    {
+        #        ikey[len(item):]: ivalue
+        #        for ikey, ivalue in kwargs.iteritems()
+        #        if ikey.startswith(item)
+        #        }
+        #    for item in ['input_', 'output_']
+        #    ]
+        
+        input_kwargs = self.get_operation_functions('input', kwargs)
+        output_kwargs = self.get_operation_functions('output', kwargs)
+        
         input_kwargs, output_kwargs = [
-            {
-                ikey[len(item):]: ivalue
-                for ikey, ivalue in kwargs.iteritems()
-                if ikey.startswith(item)
-                }
-            for item in ['input_', 'output_']
+            self.get_operation_functions(item, kwargs)
+            for item in ['input', 'output']
             ]
         
-        for ikey in ['coercion_functions', 'typecheck_functions']:
-            try:
-                ivalue = kwargs[ikey]
-            except KeyError:
-                continue
-            
-            for ikwargs in [input_kwargs, output_kwargs]:
-                ikwargs.setdefault(ikey, ivalue)
+        other_input_kwargs, other_output_kwargs = [
+            {
+                ikey: kwargs[ikwargs_key]
+                for ikey, ikwargs_key in [
+                    (ikey, '_'.join([iphase, ikey]))
+                    for ikey in ['required', 'optional', 'unlimited']
+                    ]
+                if ikwargs_key in kwargs
+                }
+            for iphase in ['input', 'output']
+            ]
+        
+        input_kwargs.update(other_input_kwargs)
+        output_kwargs.update(other_output_kwargs)
         
         self.input_processor = IOProcessor(**input_kwargs)
         self.output_processor = IOProcessor(**output_kwargs)
+    
+    def get_operation_functions(self, phase, kwargs_dict):
+        def find_functions(general_key):
+            specific_key = '_'.join([phase, general_key])
+            
+            for ikey in [specific_key, general_key]:
+                try:
+                    return kwargs_dict[ikey]
+                except KeyError:
+                    continue
+            
+            for ikey in [specific_key, general_key]:
+                try:
+                    return getattr(self, ikey)
+                except AttributeError:
+                    continue
+            
+            return None
+        
+        result = {}
+        for operation in ['coercion', 'typecheck']:
+            general_key = operation + '_functions'
+            function_result = find_functions(general_key)
+            if function_result is not None:
+                result[general_key] = function_result
+        return result
     
     def process_input(
         self,

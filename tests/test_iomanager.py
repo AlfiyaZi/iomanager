@@ -990,7 +990,6 @@ class IOManagerSubclassDefaultsTest(object):
             required=self.required_type
             )
     
-    @pytest.mark.c
     def test_operation_defaults_input(self):
         self.operation_defaults_test('input')
     
@@ -1003,6 +1002,7 @@ class IOManagerSubclassDefaultsTest(object):
     def test_operation_overrides_output(self):
         self.operation_overrides_test('output')
     
+    @pytest.mark.c
     def test_operation_specific_defaults_input(self):
         self.operation_defaults_test('input', 'input')
     
@@ -1016,7 +1016,7 @@ class IOManagerSubclassDefaultsTest(object):
         self.operation_overrides_test('output', 'output')
 
 @pytest.mark.b
-class TestIOManagerSubclassDefaultsCoercion(
+class TestIOManagerSubclassDefaultsVerify(
     IOManagerSubclassDefaultsTest,
     unittest.TestCase,
     ):
