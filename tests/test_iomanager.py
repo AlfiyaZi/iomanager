@@ -606,7 +606,7 @@ class TestCoercionContainersPreserved(unittest.TestCase):
 # ------------------------- IOProcessor tests --------------------------
 
 @pytest.mark.b
-class TestIOProcessorStashDefaults(unittest.TestCase):
+class TestIOProcessorStashDefaultsVerify(unittest.TestCase):
     """ When 'required', 'optional', and 'unlimited' are provided to '__init__',
         they are used as default argument values to 'verify' and 'coerce'. """
     
@@ -622,6 +622,7 @@ class TestIOProcessorStashDefaults(unittest.TestCase):
             **{parameter_name: object}
                )
     
+    @pytest.mark.c
     def test_default_required(self):
         self.default_test('required')
     

@@ -150,25 +150,42 @@ class IOProcessor(object):
         self,
         coercion_functions={},
         typecheck_functions={},
+        required=NotProvided,
+        optional=NotProvided,
+        unlimited=False,
         ):
         self.coercion_functions = coercion_functions.copy()
         self.typecheck_functions = typecheck_functions.copy()
+        self.default_required = required
+        self.default_optional = optional
+        self.default_unlimited = unlimited
+    
+    def apply_defaults(self, *pargs):
+        names = ['required', 'optional', 'unlimited'][:len(pargs)]
+        pairs = zip(pargs, names)
+        return [
+            item if item is not NotProvided
+            else getattr(self, 'default_' + iname)
+            for item, iname in pairs
+            ]
     
     def verify(
         self,
         iovalue,
         required=NotProvided,
         optional=NotProvided,
-        unlimited=False,
+        unlimited=NotProvided,
         ):
-        required_iospec = required
-        optional_iospec = optional
-        combined_iospec = combine_iospecs(required_iospec, optional_iospec)
+        required, optional, unlimited = self.apply_defaults(
+            required, optional, unlimited
+            )
         
-        missing = self.difference_ioval(required_iospec, iovalue)
+        combined_iospec = combine_iospecs(required, optional)
+        
+        missing = self.difference_ioval(required, iovalue)
         unknown = self.difference_ioval(iovalue, combined_iospec)
         
-        if unlimited:
+        if unlimited is True:
             unknown = self.filter_unlimited(unknown, combined_iospec)
         
         try:
@@ -378,6 +395,7 @@ class IOProcessor(object):
         required=NotProvided,
         optional=NotProvided,
         ):
+        required, optional = self.apply_defaults(required, optional)
         combined_iospec = combine_iospecs(required, optional)
         
         return self.coerce_ioval(iovalue, combined_iospec)
