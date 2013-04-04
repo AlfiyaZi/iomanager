@@ -935,7 +935,7 @@ class TestIOManagerStashDefaultsCoerceOutput(
 
 # ----------------------- Subclass defaults tests ------------------------
 
-@pytest.mark.c
+@pytest.mark.o
 class TestIOProcessorSubclassDefaults(unittest.TestCase):
     """ 'coercion_functions' and 'typecheck_functions' can be set as defaults
         in a subclass definition. """
@@ -947,7 +947,6 @@ class TestIOProcessorSubclassDefaults(unittest.TestCase):
             required=CustomType,
             )
     
-    @pytest.mark.d
     def test_typecheck_defaults(self):
         with pytest.raises(VerificationFailureError):
             self.typecheck_test(CustomType())
@@ -991,6 +990,7 @@ class IOManagerSubclassDefaultsTest(object):
             required=self.required_type
             )
     
+    @pytest.mark.c
     def test_operation_defaults_input(self):
         self.operation_defaults_test('input')
     

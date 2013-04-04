@@ -148,14 +148,16 @@ class TypeNameRepresentation(object):
 class IOProcessor(object):
     def __init__(
         self,
-        coercion_functions={},
-        typecheck_functions={},
+        typecheck_functions=NotProvided,
+        coercion_functions=NotProvided,
         required=NotProvided,
         optional=NotProvided,
         unlimited=False,
         ):
-        self.coercion_functions = coercion_functions.copy()
-        self.typecheck_functions = typecheck_functions.copy()
+        if typecheck_functions is not NotProvided:
+            self.typecheck_functions = typecheck_functions.copy()
+        if coercion_functions is not NotProvided:
+            self.coercion_functions = coercion_functions.copy()
         
         # Defaults
         self.required = required
@@ -328,7 +330,7 @@ class IOProcessor(object):
         # Custom type-checking function.
         try:
             typecheck_function = self.typecheck_functions[expected_type]
-        except KeyError:
+        except (KeyError, AttributeError):
             pass
         else:
             try:
@@ -413,7 +415,7 @@ class IOProcessor(object):
         # Coerce non-container types.
         try:
             coercion_function = self.coercion_functions[expected_type]
-        except KeyError:
+        except (KeyError, AttributeError):
             result = ioval
         else:
             result = coercion_function(ioval)
