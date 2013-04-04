@@ -3,6 +3,7 @@
 import pytest
 import unittest
 import string
+from contextlib import contextmanager
 
 import iomanager
 from iomanager import (
@@ -27,6 +28,17 @@ class CustomType(object):
 
 class CustomSubclassType(CustomType):
     """ A custom type used for testing type-checking. """
+
+class BeforeCoercionType(object):
+    """ A type that coerces to YesCoercionType. """
+
+class YesCoercionType(object):
+    """ A type with a custom coercion function. """
+
+def coerce_custom(value):
+    if isinstance(value, BeforeCoercionType):
+        return YesCoercionType()
+    return value
 
 # --------------------------- Baseline tests ---------------------------
 
@@ -227,6 +239,34 @@ class TestVerifyTypeCheckNestedIOSpec(
 
 
 # ---------------------- Structure-checking tests ----------------------
+
+class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
+    """ When dealing with non-container 'iospec' values, there is not much
+        structure to-be-verified. This case only needs to test that 'unlimited'
+        is ignored when non-container types are involved. """
+    def unlimited_ignored_test(self, parameter_name):
+        with pytest.raises(VerificationFailureError):
+            IOProcessor().verify(
+                iovalue=object(),
+                unlimited=True,
+                **{parameter_name: CustomType}
+                )
+    
+    def test_unlimited_ignored_required(self):
+        self.unlimited_ignored_test('required')
+    
+    def test_unlimited_ignored_optional(self):
+        self.unlimited_ignored_test('optional')
+    
+    def test_unlimited_ignored_no_iospec(self):
+        """ When no 'iospec' is provided, verification and 'unlimited' is ignored
+            ('True' and 'False' both pass).
+            
+            Similar to the situation with non-container IOSpecs."""
+        IOProcessor().verify(
+            iovalue=object(),
+            unlimited=True,
+            )
     
 class VerifyStructureBasicTest(object):
     """ Applies to all container types. """
@@ -400,48 +440,19 @@ class TestVerifyStructureNestedIOSpec(
     def test_unlimited_extra_nested_item_raises_optional(self):
         self.unlimited_extra_nested_item_raises_test('optional')
 
-class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
-    """ When dealing with non-container 'iospec' values, there is not much
-        structure to-be-verified. This case only needs to test that 'unlimited'
-        is ignored when non-container types are involved. """
-    def unlimited_ignored_test(self, parameter_name):
-        with pytest.raises(VerificationFailureError):
-            IOProcessor().verify(
-                iovalue=object(),
-                unlimited=True,
-                **{parameter_name: CustomType}
-                )
-    
-    def test_unlimited_ignored_required(self):
-        self.unlimited_ignored_test('required')
-    
-    def test_unlimited_ignored_optional(self):
-        self.unlimited_ignored_test('optional')
-
 
 
 # --------------------------- Coercion tests ---------------------------
 
 class CoercionTestCase(unittest.TestCase):
-    class BeforeCoercionType(object):
-        """ A type that coerces to YesCoercionType. """
-    
-    class YesCoercionType(object):
-        """ A type with a custom coercion function. """
-    
-    def coerce_custom(self, value):
-        if isinstance(value, self.BeforeCoercionType):
-            return self.YesCoercionType()
-        return value
-    
     def setUp(self):
         self.ioprocessor = IOProcessor(
-            coercion_functions={self.YesCoercionType: self.coerce_custom}
+            coercion_functions={YesCoercionType: coerce_custom}
             )
 
 class CoercionTest(object):
     def no_coercion_test(self, parameter_name):
-        uncoerced_value = self.BeforeCoercionType()
+        uncoerced_value = BeforeCoercionType()
         
         coercion_result = self.ioprocessor.coerce(
             iovalue=self.wrap_iovalue(uncoerced_value),
@@ -460,13 +471,13 @@ class CoercionTest(object):
     
     def yes_coercion_test(self, parameter_name):
         coercion_result = self.ioprocessor.coerce(
-            iovalue=self.wrap_iovalue(self.BeforeCoercionType()),
-            **{parameter_name: self.wrap_iospec(self.YesCoercionType)}
+            iovalue=self.wrap_iovalue(BeforeCoercionType()),
+            **{parameter_name: self.wrap_iospec(YesCoercionType)}
             )
         
         result = self.retrieve_result(coercion_result)
         
-        assert isinstance(result, self.YesCoercionType)
+        assert isinstance(result, YesCoercionType)
     
     def test_yes_coercion_required(self):
         self.yes_coercion_test('required')
@@ -475,17 +486,17 @@ class CoercionTest(object):
         self.yes_coercion_test('optional')
     
     def test_required_overrides_optional(self):
-        uncoerced_value = self.BeforeCoercionType()
+        uncoerced_value = BeforeCoercionType()
         
         coercion_result = self.ioprocessor.coerce(
             iovalue=self.wrap_iovalue(uncoerced_value),
-            required=self.wrap_iospec(self.YesCoercionType),
+            required=self.wrap_iospec(YesCoercionType),
             optional=self.wrap_iospec(object),
             )
         
         result = self.retrieve_result(coercion_result)
         
-        assert isinstance(result, self.YesCoercionType)
+        assert isinstance(result, YesCoercionType)
 
 class TestCoerceNonContainerIOSpec(CoercionTest, CoercionTestCase):
     def wrap_iospec(self, iospec):
@@ -589,6 +600,86 @@ class TestCoercionContainersPreserved(unittest.TestCase):
     
     def test_list_preserved_optional(self):
         self.list_preserved_test('optional')
+
+
+
+# ------------------------- IOProcessor tests --------------------------
+
+@pytest.mark.b
+class TestIOProcessorStashDefaults(unittest.TestCase):
+    """ When 'required', 'optional', and 'unlimited' are provided to '__init__',
+        they are used as default argument values to 'verify' and 'coerce'. """
+    
+    def default_test(self, parameter_name):
+        processor = IOProcessor(**{parameter_name: CustomType})
+        with pytest.raises(VerificationFailureError):
+            processor.verify(iovalue=object())
+    
+    def override_test(self, parameter_name):
+        processor = IOProcessor(**{parameter_name: CustomType})
+        processor.verify(
+            iovalue=object(),
+            **{parameter_name: object}
+               )
+    
+    def test_default_required(self):
+        self.default_test('required')
+    
+    def test_default_optional(self):
+        self.default_test('optional')
+    
+    def test_override_required(self):
+        self.override_test('required')
+    
+    def test_override_optional(self):
+        self.override_test('optional')
+    
+    def unlimited_default_test(self, parameter_name):
+        processor = IOProcessor(unlimited=True)
+        processor.verify(
+            iovalue=[object()],
+            **{parameter_name: []}
+            )
+    
+    def test_unlimited_required(self):
+        self.unlimited_default_test('required')
+    
+    def test_unlimited_optional(self):
+        self.unlimited_default_test('optional')
+
+@pytest.mark.a
+class TestIOProcessorStashDefaultsCoerce(CoercionTestCase):
+    def make_processor(self, parameter_name):
+        return IOProcessor(
+            coercion_functions={YesCoercionType: coerce_custom},
+            **{parameter_name: YesCoercionType}
+            )
+    
+    def default_test(self, parameter_name):
+        processor = self.make_processor(parameter_name)
+        result = processor.coerce(iovalue=BeforeCoercionType())
+        assert isinstance(result, YesCoercionType)
+    
+    def override_test(self, parameter_name):
+        processor = self.make_processor(parameter_name)
+        initial_value = object()
+        result = processor.coerce(
+            iovalue=initial_value,
+            **{parameter_name: object}
+            )
+        assert result is initial_value
+    
+    def test_default_required(self):
+        self.default_test('required')
+    
+    def test_default_optional(self):
+        self.default_test('optional')
+    
+    def test_override_required(self):
+        self.override_test('required')
+    
+    def test_override_optional(self):
+        self.override_test('optional')
 
 
 
@@ -696,6 +787,8 @@ class TestIOManagerProcessTypecheck(IOManagerTest):
         self.typecheck_test('output')
 
 class IOManagerPrecedenceTest(IOManagerTest):
+    """ Check that 'coercion' and 'typecheck' functions provided to '__init__'
+        override each other as expected. """
     def precedence_test(self, process_stage, process_kind):
         class ExpectedType(object):
             pass
