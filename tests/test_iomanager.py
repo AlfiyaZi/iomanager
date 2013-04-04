@@ -66,11 +66,14 @@ class TestCoerceNoIOSpec(unittest.TestCase):
 
 # ------------------------ Type-checking tests -------------------------
 
+@pytest.mark.current
+@pytest.mark.f
 class VerifyTypeCheckBaseTest(object):
     def correct_type_passes_test(self, parameter_name):
-        IOProcessor().verify(
-            iovalue=self.wrap_iovalue(object()),
+        IOProcessor(
             **{parameter_name: self.wrap_iospec(object)}
+            ).verify(
+            iovalue=self.wrap_iovalue(object())
             )
     
     def test_correct_type_passes_required(self):
@@ -80,9 +83,10 @@ class VerifyTypeCheckBaseTest(object):
         self.correct_type_passes_test('optional')
     
     def correct_type_subclass_passes_test(self, parameter_name):
-        IOProcessor().verify(
-            iovalue=self.wrap_iovalue(CustomSubclassType()),
+        IOProcessor(
             **{parameter_name: self.wrap_iospec(CustomType)}
+            ).verify(
+            iovalue=self.wrap_iovalue(CustomSubclassType())
             )
     
     def test_correct_type_subclass_passes_required(self):
@@ -93,9 +97,10 @@ class VerifyTypeCheckBaseTest(object):
     
     def wrong_type_raises_test(self, parameter_name):
         with pytest.raises(VerificationFailureError):
-            IOProcessor().verify(
-                iovalue=self.wrap_iovalue(object()),
+            IOProcessor(
                 **{parameter_name: self.wrap_iospec(CustomType)}
+                ).verify(
+                iovalue=self.wrap_iovalue(object())
                 )
     
     def test_wrong_type_raises_required(self):
@@ -105,9 +110,10 @@ class VerifyTypeCheckBaseTest(object):
         self.wrong_type_raises_test('optional')
     
     def anytype_passes_test(self, parameter_name):
-        IOProcessor().verify(
-            iovalue=self.wrap_iovalue(object()),
+        IOProcessor(
             **{parameter_name: self.wrap_iospec(iomanager.AnyType)}
+            ).verify(
+            iovalue=self.wrap_iovalue(object())
             )
     
     def test_anytype_passes_required(self):
@@ -117,21 +123,22 @@ class VerifyTypeCheckBaseTest(object):
         self.anytype_passes_test('optional')
     
     def test_required_overrides_optional(self):
-        IOProcessor().verify(
-            iovalue=self.wrap_iovalue(object()),
+        IOProcessor(
             required=self.wrap_iospec(object),
             optional=self.wrap_iospec(CustomType),
+            ).verify(
+            iovalue=self.wrap_iovalue(object())
             )
     
     def custom_function_test(self, value, custom_function):
         """ Confirm type checking behavior when custom type-checking functions
             are in use. """
         ioprocessor = IOProcessor(
-            typecheck_functions={CustomType: custom_function}
+            typecheck_functions={CustomType: custom_function},
+            required=self.wrap_iospec(CustomType),
             )
         ioprocessor.verify(
-            iovalue=self.wrap_iovalue(value),
-            required=self.wrap_iospec(CustomType),
+            iovalue=self.wrap_iovalue(value)
             )
     
     def test_type_check_failure_error(self):
@@ -154,9 +161,10 @@ class VerifyTypeCheckBaseTest(object):
         self.custom_function_test(object(), custom_typecheck_accept_function)
     
     def none_value_passes_test(self, parameter_name):
-        IOProcessor().verify(
-            iovalue=self.wrap_iovalue(None),
+        IOProcessor(
             **{parameter_name: self.wrap_iospec(object)}
+            ).verify(
+            iovalue=self.wrap_iovalue(None)
             )
 
 class VerifyTypeCheckStandardTest(VerifyTypeCheckBaseTest):
@@ -245,16 +253,19 @@ class TestVerifyTypeCheckNestedIOSpec(
 
 # ---------------------- Structure-checking tests ----------------------
 
+@pytest.mark.current
+@pytest.mark.e
 class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
     """ When dealing with non-container 'iospec' values, there is not much
         structure to-be-verified. This case only needs to test that 'unlimited'
         is ignored when non-container types are involved. """
     def unlimited_ignored_test(self, parameter_name):
         with pytest.raises(VerificationFailureError):
-            IOProcessor().verify(
-                iovalue=object(),
+            IOProcessor(
                 unlimited=True,
                 **{parameter_name: CustomType}
+                ).verify(
+                iovalue=object()
                 )
     
     def test_unlimited_ignored_required(self):
@@ -268,17 +279,21 @@ class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
             ('True' and 'False' both pass).
             
             Similar to the situation with non-container IOSpecs."""
-        IOProcessor().verify(
-            iovalue=object(),
+        IOProcessor(
             unlimited=True,
+            ).verify(
+            iovalue=object()
             )
-    
+
+@pytest.mark.current
+@pytest.mark.d
 class VerifyStructureBasicTest(object):
     """ Applies to all container types. """
     def empty_test(self, parameter_name, iovalue):
-        IOProcessor().verify(
-            iovalue=iovalue,
+        IOProcessor(
             **{parameter_name: self.make_iospec(0)}
+            ).verify(
+            iovalue=iovalue
             )
     
     def empty_gets_empty_passes_test(self, parameter_name):
@@ -301,9 +316,10 @@ class VerifyStructureBasicTest(object):
         self.empty_gets_none_raises_test('optional')
     
     def parameter_test(self, parameter_name, iovalue):
-        IOProcessor().verify(
-            iovalue=iovalue,
+        IOProcessor(
             **{parameter_name: self.make_iospec(1)}
+            ).verify(
+            iovalue=iovalue
             )
     
     def expected_iovalue_passes_test(self, parameter_name):
@@ -314,7 +330,9 @@ class VerifyStructureBasicTest(object):
     
     def test_expected_optional_passes(self):
         self.expected_iovalue_passes_test('optional')
-    
+
+@pytest.mark.current
+@pytest.mark.d
 class VerifyStructureStrictTest(object):
     """ Applies to 'list', 'tuple', 'dict', 'nested'. """
     def extra_item_raises_test(self, parameter_name):
@@ -339,26 +357,31 @@ class VerifyStructureStrictTest(object):
     
     def test_required_overrides_optional(self):
         with pytest.raises(VerificationFailureError):
-            IOProcessor().verify(
-                iovalue=self.make_iovalue(0),
+            IOProcessor(
                 required=self.make_iospec(1),
                 optional=self.make_iospec(1),
+                ).verify(
+                iovalue=self.make_iovalue(0)
                 )
     
     def test_optional_extends_required(self):
-        IOProcessor().verify(
-            iovalue=self.make_iovalue(2),
+        IOProcessor(
             required=self.make_iospec(1),
             optional=self.make_iospec(2),
+            ).verify(
+            iovalue=self.make_iovalue(2)
             )
 
+@pytest.mark.current
+@pytest.mark.d
 class VerifyStructureUnlimitedTest(object):
     """ Applies to 'list', 'tuple', 'dict'. """
     def unlimited_test(self, parameter_name):
-        IOProcessor().verify(
-            iovalue=self.make_iovalue(1),
+        IOProcessor(
             unlimited=True,
             **{parameter_name: self.make_iospec(0)}
+            ).verify(
+            iovalue=self.make_iovalue(1)
             )
     
     def test_unlimited_required(self):
@@ -415,6 +438,8 @@ class TestVerifyStructureListOfIOSpec(
     def make_iovalue(self, length, maker=object):
         return [maker() for i in range(length)]
 
+@pytest.mark.current
+@pytest.mark.d
 class TestVerifyStructureNestedIOSpec(
     VerifyStructureBasicTest,
     VerifyStructureStrictTest,
@@ -433,10 +458,11 @@ class TestVerifyStructureNestedIOSpec(
             unlimited. 'dict'-type iovalues should still be checked for unknown
             keys. """
         with pytest.raises(VerificationFailureError):
-            IOProcessor().verify(
-                iovalue=self.make_iovalue(2),
+            IOProcessor(
                 unlimited=True,
                 **{parameter_name: self.make_iospec(1)}
+                ).verify(
+                iovalue=self.make_iovalue(2)
                 )
     
     def test_unlimited_extra_nested_item_raises_required(self):
@@ -449,19 +475,25 @@ class TestVerifyStructureNestedIOSpec(
 
 # --------------------------- Coercion tests ---------------------------
 
+@pytest.mark.current
+@pytest.mark.c
 class CoercionTestCase(unittest.TestCase):
-    def setUp(self):
-        self.ioprocessor = IOProcessor(
-            coercion_functions={YesCoercionType: custom_coercion_function}
+    def ioprocessor(self, **kwargs):
+        kwargs.update(
+            {'coercion_functions': {YesCoercionType: custom_coercion_function}}
             )
+        return IOProcessor(**kwargs)
 
+@pytest.mark.c
 class CoercionTest(object):
     def no_coercion_test(self, parameter_name):
         uncoerced_value = BeforeCoercionType()
         
-        coercion_result = self.ioprocessor.coerce(
-            iovalue=self.wrap_iovalue(uncoerced_value),
+        #coercion_result = self.ioprocessor.coerce(
+        coercion_result = self.ioprocessor(
             **{parameter_name: self.wrap_iospec(object)}
+            ).coerce(
+            iovalue=self.wrap_iovalue(uncoerced_value)
             )
         
         result = self.retrieve_result(coercion_result)
@@ -475,9 +507,11 @@ class CoercionTest(object):
         self.no_coercion_test('optional')
     
     def yes_coercion_test(self, parameter_name):
-        coercion_result = self.ioprocessor.coerce(
-            iovalue=self.wrap_iovalue(BeforeCoercionType()),
+        #coercion_result = self.ioprocessor.coerce(
+        coercion_result = self.ioprocessor(
             **{parameter_name: self.wrap_iospec(YesCoercionType)}
+            ).coerce(
+            iovalue=self.wrap_iovalue(BeforeCoercionType())
             )
         
         result = self.retrieve_result(coercion_result)
@@ -493,10 +527,12 @@ class CoercionTest(object):
     def test_required_overrides_optional(self):
         uncoerced_value = BeforeCoercionType()
         
-        coercion_result = self.ioprocessor.coerce(
-            iovalue=self.wrap_iovalue(uncoerced_value),
+        #coercion_result = self.ioprocessor.coerce(
+        coercion_result = self.ioprocessor(
             required=self.wrap_iospec(YesCoercionType),
             optional=self.wrap_iospec(object),
+            ).coerce(
+            iovalue=self.wrap_iovalue(uncoerced_value)
             )
         
         result = self.retrieve_result(coercion_result)
@@ -563,11 +599,14 @@ class TestCoerceNestedIOSpec(CoercionTest, CoercionTestCase):
     def retrieve_result(self, coercion_result):
         return coercion_result['a']['b']
 
+@pytest.mark.current
+@pytest.mark.b
 class TestCoercionContainersPreserved(unittest.TestCase):
     def preservation_test(self, parameter_name, initial, expected, iospec):
-        result = IOProcessor().coerce(
-            iovalue=initial,
+        result = IOProcessor(
             **{parameter_name: iospec}
+            ).coerce(
+            iovalue=initial
             )
         
         assert result == expected
@@ -935,6 +974,7 @@ class TestIOManagerStashDefaultsCoerceOutput(
 
 # ----------------------- Subclass defaults tests ------------------------
 
+@pytest.mark.waiting
 @pytest.mark.o
 class TestIOProcessorSubclassDefaults(unittest.TestCase):
     """ 'coercion_functions' and 'typecheck_functions' can be set as defaults
@@ -1002,7 +1042,8 @@ class IOManagerSubclassDefaultsTest(object):
     def test_operation_overrides_output(self):
         self.operation_overrides_test('output')
     
-    @pytest.mark.c
+    @pytest.mark.waiting
+    @pytest.mark.z
     def test_operation_specific_defaults_input(self):
         self.operation_defaults_test('input', 'input')
     
@@ -1015,7 +1056,8 @@ class IOManagerSubclassDefaultsTest(object):
     def test_operation_specific_overrides_output(self):
         self.operation_overrides_test('output', 'output')
 
-@pytest.mark.b
+@pytest.mark.waiting
+@pytest.mark.y
 class TestIOManagerSubclassDefaultsVerify(
     IOManagerSubclassDefaultsTest,
     unittest.TestCase,
@@ -1037,7 +1079,8 @@ class TestIOManagerSubclassDefaultsVerify(
         kwargs.update({'typecheck_functions': {}})
         self.operation_test(CustomType(), *pargs, **kwargs)
 
-@pytest.mark.a
+@pytest.mark.waiting
+@pytest.mark.x
 class TestIOManagerSubclassDefaultsCoerce(
     IOManagerSubclassDefaultsTest,
     unittest.TestCase,
