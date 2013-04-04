@@ -35,10 +35,16 @@ class BeforeCoercionType(object):
 class YesCoercionType(object):
     """ A type with a custom coercion function. """
 
-def coerce_custom(value):
+def custom_coercion_function(value):
     if isinstance(value, BeforeCoercionType):
         return YesCoercionType()
     return value
+
+def custom_typecheck_reject_function(value, expected_type):
+    raise TypeCheckFailureError
+
+def custom_typecheck_accept_function(value, expected_type):
+    raise TypeCheckSuccessError
 
 # --------------------------- Baseline tests ---------------------------
 
@@ -135,18 +141,17 @@ class VerifyTypeCheckBaseTest(object):
             
             This can be used for 'subclass rejection'. For example: 'int' type
             rejects 'bool' values. """
-        def reject_value(value, expected_type):
-            raise TypeCheckFailureError
         with pytest.raises(VerificationFailureError):
-            self.custom_function_test(CustomType(), reject_value)
+            self.custom_function_test(
+                CustomType(),
+                custom_typecheck_reject_function
+                )
     
     def test_type_check_success_error(self):
         """ When a custom type-checking function raises a TypeCheckSuccessError,
             type checking passes even if the value would have been rejected
             normally. """
-        def accept_value(value, expected_type):
-            raise TypeCheckSuccessError
-        self.custom_function_test(object(), accept_value)
+        self.custom_function_test(object(), custom_typecheck_accept_function)
     
     def none_value_passes_test(self, parameter_name):
         IOProcessor().verify(
@@ -447,7 +452,7 @@ class TestVerifyStructureNestedIOSpec(
 class CoercionTestCase(unittest.TestCase):
     def setUp(self):
         self.ioprocessor = IOProcessor(
-            coercion_functions={YesCoercionType: coerce_custom}
+            coercion_functions={YesCoercionType: custom_coercion_function}
             )
 
 class CoercionTest(object):
@@ -902,7 +907,7 @@ class TestIOProcessorStashDefaultsCoerce(
             self,
             parameter_name,
             YesCoercionType,
-            coercion_functions={YesCoercionType: coerce_custom}
+            coercion_functions={YesCoercionType: custom_coercion_function}
             )
 
 class IOManagerStashDefaultsCoerceTestCase(IOManagerStashDefaultsTestCase):
@@ -913,7 +918,7 @@ class IOManagerStashDefaultsCoerceTestCase(IOManagerStashDefaultsTestCase):
             self,
             parameter_name,
             YesCoercionType,
-            coercion_functions={YesCoercionType: coerce_custom}
+            coercion_functions={YesCoercionType: custom_coercion_function}
             )
 
 class TestIOManagerStashDefaultsCoerceInput(     
@@ -930,17 +935,19 @@ class TestIOManagerStashDefaultsCoerceOutput(
 
 # ----------------------- Subclass defaults tests ------------------------
 
-@pytest.mark.b
+@pytest.mark.c
 class TestIOProcessorSubclassDefaults(unittest.TestCase):
     """ 'coercion_functions' and 'typecheck_functions' can be set as defaults
         in a subclass definition. """
     def typecheck_test(self, value, **kwargs):
-        def reject_value(value, expected_type):
-            raise TypeCheckFailureError
         class CustomIOProcessor(IOProcessor):
-            typecheck_functions = {CustomType: reject_value}
-        CustomIOProcessor(**kwargs).verify(iovalue=value)
+            typecheck_functions = {CustomType: custom_typecheck_reject_function}
+        CustomIOProcessor(**kwargs).verify(
+            iovalue=value,
+            required=CustomType,
+            )
     
+    @pytest.mark.d
     def test_typecheck_defaults(self):
         with pytest.raises(VerificationFailureError):
             self.typecheck_test(CustomType())
@@ -950,8 +957,11 @@ class TestIOProcessorSubclassDefaults(unittest.TestCase):
     
     def get_coercion_result(self, value, **kwargs):
         class CustomIOProcessor(IOProcessor):
-            coercion_functions = {YesCoercionType: coerce_custom}
-        return CustomIOProcessor(**kwargs).coerce(iovalue=value)
+            coercion_functions = {YesCoercionType: custom_coercion_function}
+        return CustomIOProcessor(**kwargs).coerce(
+            iovalue=value,
+            required=YesCoercionType,
+            )
     
     def test_coercion_defaults(self):
         result = self.get_coercion_result(BeforeCoercionType())
@@ -962,57 +972,94 @@ class TestIOProcessorSubclassDefaults(unittest.TestCase):
         result = self.get_coercion_result(initial_value, coercion_functions={})
         assert result is initial_value
 
-@pytest.mark.a
-class TestIOManagerSubclassDefaults(unittest.TestCase):
-    """ '...coercion_functions' and '...typecheck_functions' can be set as
-        defaults in a subclass definition. """
-    def typecheck_test(self, value, phase_name, attr_part='', **kwargs):
-        def reject_value(value, expected_type):
-            raise TypeCheckFailureError
-        
+class IOManagerSubclassDefaultsTest(object):
+    def operation_test(self, value, phase_name, attr_part='', **kwargs):
         class CustomIOManager(IOManager):
             pass
         
-        attr_name = '_'.join(filter(None, [attr_part, 'typecheck_functions']))
-        setattr(CustomIOManager, attr_name, {CustomType: reject_value})
+        attr_name = '_'.join(
+            filter(None, [attr_part, self.functions_kind, 'functions'])
+            )
+        setattr(CustomIOManager, attr_name, self.get_custom_functions())
         
-        method_name = 'verify_' + phase_name
+        method_name = '_'.join([self.operation_name, phase_name])
         manager = CustomIOManager(**kwargs)
         method = getattr(manager, method_name)
         
-        method(iovalue=value)
+        return method(
+            iovalue=value,
+            required=self.required_type
+            )
     
-    def typecheck_defaults_test(self, phase_name, *pargs, **kwargs):
+    def test_operation_defaults_input(self):
+        self.operation_defaults_test('input')
+    
+    def test_operation_defaults_output(self):
+        self.operation_defaults_test('output')
+    
+    def test_operation_overrides_input(self):
+        self.operation_overrides_test('input')
+    
+    def test_operation_overrides_output(self):
+        self.operation_overrides_test('output')
+    
+    def test_operation_specific_defaults_input(self):
+        self.operation_defaults_test('input', 'input')
+    
+    def test_operation_specific_defaults_output(self):
+        self.operation_defaults_test('output', 'output')
+    
+    def test_operation_specific_overrides_input(self):
+        self.operation_overrides_test('input', 'input')
+    
+    def test_operation_specific_overrides_output(self):
+        self.operation_overrides_test('output', 'output')
+
+@pytest.mark.b
+class TestIOManagerSubclassDefaultsCoercion(
+    IOManagerSubclassDefaultsTest,
+    unittest.TestCase,
+    ):
+    """ '...typecheck_functions' can be set as a default in a subclass
+        definition. """
+    functions_kind = 'typecheck'
+    operation_name = 'verify'
+    required_type = CustomType
+    
+    def get_custom_functions(self):
+        return {CustomType: custom_typecheck_reject_function}
+    
+    def operation_defaults_test(self, *pargs, **kwargs):
         with pytest.raises(VerificationFailureError):
-            self.typecheck_test(CustomType(), phase_name, *pargs, **kwargs)
+            self.operation_test(CustomType(), *pargs, **kwargs)
     
-    def typecheck_init_overrides_test(self, phase_name, *pargs, **kwargs):
+    def operation_overrides_test(self, *pargs, **kwargs):
         kwargs.update({'typecheck_functions': {}})
-        self.typecheck_test(CustomType(), phase_name, *pargs, **kwargs)
+        self.operation_test(CustomType(), *pargs, **kwargs)
+
+@pytest.mark.a
+class TestIOManagerSubclassDefaultsCoerce(
+    IOManagerSubclassDefaultsTest,
+    unittest.TestCase,
+    ):
+    """ '...coercion_functions' can be set as a default in a subclass
+        definition. """
+    functions_kind = 'coercion'
+    operation_name = 'coerce'
+    required_type = YesCoercionType
     
-    def test_typecheck_defaults_input(self):
-        self.typecheck_defaults_test('input')
+    def get_custom_functions(self):
+        return {YesCoercionType: custom_coercion_function}
     
-    def test_typecheck_defaults_output(self):
-        self.typecheck_defaults_test('output')
+    def operation_defaults_test(self, *pargs, **kwargs):
+        result = self.operation_test(BeforeCoercionType(), *pargs, **kwargs)
+        assert isinstance(result, YesCoercionType)
     
-    def test_typecheck_init_overrides_input(self):
-        self.typecheck_init_overrides_test('input')
-    
-    def test_typecheck_init_overrides_output(self):
-        self.typecheck_init_overrides_test('output')
-    
-    def test_typecheck_specific_defaults_input(self):
-        self.typecheck_defaults_test('input', 'input')
-    
-    def test_typecheck_specific_defaults_output(self):
-        self.typecheck_defaults_test('output', 'output')
-    
-    def test_typechcek_specific_init_overrides_input(self):
-        self.typecheck_init_overrides_test('input', 'input')
-    
-    def test_typechcek_specific_init_overrides_output(self):
-        self.typecheck_init_overrides_test('output', 'output')
+    def operation_overrides_test(self, *pargs, **kwargs):
+        kwargs.update({'coercion_functions': {}})
+        initial_value = BeforeCoercionType()
+        result = self.operation_test(initial_value, *pargs, **kwargs)
+        assert result is initial_value
 
 
 
