@@ -731,14 +731,14 @@ class IOManagerStashDefaultsCoerceTestCase(IOManagerStashDefaultsTestCase):
             coercion_functions={YesCoercionType: coerce_custom}
             )
 
-@pytest.mark.c
+@pytest.mark.a
 class TestIOManagerStashDefaultsCoerceInput(     
     StashDefaultsCoerceTest,
     IOManagerStashDefaultsCoerceTestCase,
     ):
     phase_name = 'input'
 
-@pytest.mark.c
+@pytest.mark.a
 class TestIOManagerStashDefaultsCoerceOutput(     
     StashDefaultsCoerceTest,
     IOManagerStashDefaultsCoerceTestCase,

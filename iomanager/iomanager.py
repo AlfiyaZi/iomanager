@@ -156,16 +156,18 @@ class IOProcessor(object):
         ):
         self.coercion_functions = coercion_functions.copy()
         self.typecheck_functions = typecheck_functions.copy()
-        self.default_required = required
-        self.default_optional = optional
-        self.default_unlimited = unlimited
+        
+        # Defaults
+        self.required = required
+        self.optional = optional
+        self.unlimited = unlimited
     
     def apply_defaults(self, *pargs):
         names = ['required', 'optional', 'unlimited'][:len(pargs)]
         pairs = zip(pargs, names)
         return [
             item if item is not NotProvided
-            else getattr(self, 'default_' + iname)
+            else getattr(self, iname)
             for item, iname in pairs
             ]
     
@@ -472,75 +474,91 @@ class IOManager(object):
         for attr_name, attr_value in attributes.iteritems():
             setattr(self, attr_name, attr_value)
     
-    def make_ioprocessor(self, kind):
-        """ coerce(), then verify(). """
-        init_parts = {
-            'coercion_functions': (
-                '{}_coercion_functions'.format(kind),
-                'coercion_functions'
-                ),
-            'typecheck_functions': (
-                '{}_typecheck_functions'.format(kind),
-                'typecheck_functions',
-                ),
-        }
-        init_kwargs = {}
-        for init_key, attr_names in init_parts.iteritems():
-            for attr_name in attr_names:
-                try:
-                    init_kwargs[init_key] = getattr(self, attr_name)
-                except AttributeError:
-                    continue
-                else:
-                    break
+    def __init__(self, **kwargs):
+        keys = [
+            'coercion_functions',
+            'typecheck_functions',
+            'input_coercion_functions',
+            'input_typecheck_functions',
+            'input_required',
+            'input_optional',
+            'input_unlimited',
+            'output_coercion_functions',
+            'output_typecheck_functions',
+            'output_required',
+            'output_optional',
+            'output_unlimited',
+            ]
         
-        return IOProcessor(**init_kwargs)
+        for ikey, ivalue in kwargs.iteritems():
+            if ikey not in keys:
+                raise TypeError(
+                    "__init__() got an unexpected keyword argument '{}'"
+                    .format(ikey)
+                    )
+        
+        input_kwargs, output_kwargs = [
+            {
+                ikey[len(item):]: ivalue
+                for ikey, ivalue in kwargs.iteritems()
+                if ikey.startswith(item)
+                }
+            for item in ['input_', 'output_']
+            ]
+        
+        for ikey in ['coercion_functions', 'typecheck_functions']:
+            try:
+                ivalue = kwargs[ikey]
+            except KeyError:
+                continue
+            
+            for ikwargs in [input_kwargs, output_kwargs]:
+                ikwargs.setdefault(ikey, ivalue)
+        
+        self.input_processor = IOProcessor(**input_kwargs)
+        self.output_processor = IOProcessor(**output_kwargs)
     
     def process_input(
         self,
         iovalue,
-        required={},
-        optional={},
-        unlimited=False,
+        required=NotProvided,
+        optional=NotProvided,
+        unlimited=NotProvided,
         ):
         """ coerce(), then verify(). """
-        ioprocessor = self.make_ioprocessor('input')
+        processor = self.input_processor
         
-        coerced_iovals = ioprocessor.coerce(iovalue, required, optional)
-        ioprocessor.verify(coerced_iovals, required, optional, unlimited)
+        coerced_iovals = processor.coerce(iovalue, required, optional)
+        processor.verify(coerced_iovals, required, optional, unlimited)
         
         return coerced_iovals
     
     def process_output(
         self,
         iovalue,
-        required={},
-        optional={},
-        unlimited=False,
+        required=NotProvided,
+        optional=NotProvided,
+        unlimited=NotProvided,
         ):
         """ verify(), then coerce(). """
-        ioprocessor = self.make_ioprocessor('output')
+        processor = self.output_processor
         
-        ioprocessor.verify(iovalue, required, optional, unlimited)
-        coerced_iovals = ioprocessor.coerce(iovalue, required, optional)
+        processor.verify(iovalue, required, optional, unlimited)
+        coerced_iovals = processor.coerce(iovalue, required, optional)
         
         return coerced_iovals
     
     def coerce_input(self, *pargs, **kwargs):
-        ioprocessor = self.make_ioprocessor('input')
-        return ioprocessor.coerce(*pargs, **kwargs)
+        return self.input_processor.coerce(*pargs, **kwargs)
     
     def coerce_output(self, *pargs, **kwargs):
-        ioprocessor = self.make_ioprocessor('output')
-        return ioprocessor.coerce(*pargs, **kwargs)
+        return self.output_processor.coerce(*pargs, **kwargs)
     
     def verify_input(self, *pargs, **kwargs):
-        ioprocessor = self.make_ioprocessor('input')
-        return ioprocessor.verify(*pargs, **kwargs)
+        return self.input_processor.verify(*pargs, **kwargs)
     
     def verify_output(self, *pargs, **kwargs):
-        ioprocessor = self.make_ioprocessor('output')
-        return ioprocessor.verify(*pargs, **kwargs)
+        return self.output_processor.verify(*pargs, **kwargs)
 
 
 
