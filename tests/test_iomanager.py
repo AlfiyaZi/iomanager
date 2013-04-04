@@ -66,8 +66,6 @@ class TestCoerceNoIOSpec(unittest.TestCase):
 
 # ------------------------ Type-checking tests -------------------------
 
-@pytest.mark.current
-@pytest.mark.f
 class VerifyTypeCheckBaseTest(object):
     def correct_type_passes_test(self, parameter_name):
         IOProcessor(
@@ -253,8 +251,6 @@ class TestVerifyTypeCheckNestedIOSpec(
 
 # ---------------------- Structure-checking tests ----------------------
 
-@pytest.mark.current
-@pytest.mark.e
 class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
     """ When dealing with non-container 'iospec' values, there is not much
         structure to-be-verified. This case only needs to test that 'unlimited'
@@ -285,8 +281,6 @@ class TestVerifyStructureNonContainerIOSpec(unittest.TestCase):
             iovalue=object()
             )
 
-@pytest.mark.current
-@pytest.mark.d
 class VerifyStructureBasicTest(object):
     """ Applies to all container types. """
     def empty_test(self, parameter_name, iovalue):
@@ -331,8 +325,6 @@ class VerifyStructureBasicTest(object):
     def test_expected_optional_passes(self):
         self.expected_iovalue_passes_test('optional')
 
-@pytest.mark.current
-@pytest.mark.d
 class VerifyStructureStrictTest(object):
     """ Applies to 'list', 'tuple', 'dict', 'nested'. """
     def extra_item_raises_test(self, parameter_name):
@@ -372,8 +364,6 @@ class VerifyStructureStrictTest(object):
             iovalue=self.make_iovalue(2)
             )
 
-@pytest.mark.current
-@pytest.mark.d
 class VerifyStructureUnlimitedTest(object):
     """ Applies to 'list', 'tuple', 'dict'. """
     def unlimited_test(self, parameter_name):
@@ -438,8 +428,6 @@ class TestVerifyStructureListOfIOSpec(
     def make_iovalue(self, length, maker=object):
         return [maker() for i in range(length)]
 
-@pytest.mark.current
-@pytest.mark.d
 class TestVerifyStructureNestedIOSpec(
     VerifyStructureBasicTest,
     VerifyStructureStrictTest,
@@ -475,8 +463,6 @@ class TestVerifyStructureNestedIOSpec(
 
 # --------------------------- Coercion tests ---------------------------
 
-@pytest.mark.current
-@pytest.mark.c
 class CoercionTestCase(unittest.TestCase):
     def ioprocessor(self, **kwargs):
         kwargs.update(
@@ -599,8 +585,6 @@ class TestCoerceNestedIOSpec(CoercionTest, CoercionTestCase):
     def retrieve_result(self, coercion_result):
         return coercion_result['a']['b']
 
-@pytest.mark.current
-@pytest.mark.b
 class TestCoercionContainersPreserved(unittest.TestCase):
     def preservation_test(self, parameter_name, initial, expected, iospec):
         result = IOProcessor(
@@ -668,7 +652,6 @@ class TestIOManagerMethods(unittest.TestCase):
     def test_verify_output(self):
         self.method_test('verify_output')
 
-@pytest.mark.r
 class IOManagerTest(unittest.TestCase):
     """ Test the 'IOManager' class. """
     def process_test(
@@ -684,9 +667,9 @@ class IOManagerTest(unittest.TestCase):
         assert result == expected
     
     def make_iomanager(self, process_kind, iospec, **kwargs):
-        kwargs.update(
-            **{process_kind + '_kwargs': {'required': iospec}}
-            )
+        key = process_kind + '_kwargs'
+        kwargs.setdefault(key, {})
+        kwargs[key].update({'required': iospec})
         return IOManager(**kwargs)
 
 class TestIOManagerProcessBasic(IOManagerTest):
@@ -699,7 +682,6 @@ class TestIOManagerProcessBasic(IOManagerTest):
         
         self.process_test(manager, process_kind, iovals, expected)
     
-    @pytest.mark.s
     def test_process_input(self):
         self.no_coercion_test('input')
     
@@ -762,10 +744,14 @@ class TestIOManagerProcessTypecheck(IOManagerTest):
         
         iospec = {'a': ExpectedType}
         iovals = {'a': ExpectedType()}
-        manager = self.make_iomanager(process_kind, iospec)
+        manager = self.make_iomanager(
+            process_kind,
+            iospec,
+            **{'typecheck_functions': {ExpectedType: reject_all}}
+            )
         
         with pytest.raises(ConfirmationError):
-            self.process_test(manager, process_kind, iospec, iovals)
+            self.process_test(manager, process_kind, iovals)
     
     def test_process_input(self):
         self.typecheck_test('input')
@@ -799,7 +785,7 @@ class IOManagerPrecedenceTest(IOManagerTest):
         manager = self.make_iomanager(process_kind, iospec, **init_kwargs)
         
         with pytest.raises(ConfirmationError):
-            self.process_test(manager, process_kind, iospec, iovals)
+            self.process_test(manager, process_kind, iovals)
 
 class TestIOManagerPrecedenceCoercion(IOManagerPrecedenceTest):
     """ Confirm that 'input_coercion_functions' and 'output_coercion_functions'

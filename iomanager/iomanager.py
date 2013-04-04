@@ -444,7 +444,6 @@ class IOManager(object):
         typecheck_functions=NotProvided,
         coercion_functions=NotProvided,
         ):
-        
         input_kwargs = input_kwargs or getattr(self, 'input_kwargs', {})
         output_kwargs = output_kwargs or getattr(self, 'output_kwargs', {})
         
@@ -458,33 +457,17 @@ class IOManager(object):
         self.input_processor = IOProcessor(**input_kwargs)
         self.output_processor = IOProcessor(**output_kwargs)
     
-    def process_input(
-        self,
-        iovalue,
-        required=NotProvided,
-        optional=NotProvided,
-        unlimited=NotProvided,
-        ):
+    def process_input(self, iovalue):
         """ coerce(), then verify(). """
-        processor = self.input_processor
-        
-        coerced_iovals = processor.coerce(iovalue, required, optional)
-        processor.verify(coerced_iovals, required, optional, unlimited)
+        coerced_iovals = self.input_processor.coerce(iovalue)
+        self.input_processor.verify(coerced_iovals)
         
         return coerced_iovals
     
-    def process_output(
-        self,
-        iovalue,
-        required=NotProvided,
-        optional=NotProvided,
-        unlimited=NotProvided,
-        ):
+    def process_output(self, iovalue):
         """ verify(), then coerce(). """
-        processor = self.output_processor
-        
-        processor.verify(iovalue, required, optional, unlimited)
-        coerced_iovals = processor.coerce(iovalue, required, optional)
+        self.output_processor.verify(iovalue)
+        coerced_iovals = self.output_processor.coerce(iovalue)
         
         return coerced_iovals
     
