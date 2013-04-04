@@ -649,33 +649,57 @@ class TestCoercionContainersPreserved(unittest.TestCase):
 
 # -------------------------- IOManager tests ---------------------------
 
-@pytest.mark.xfail
-@pytest.mark.q
+class TestIOManagerMethods(unittest.TestCase):
+    """ Test the separate 'coerce' and 'verify' methods. """
+    def method_test(self, method_name):
+        iomanager = IOManager()
+        method_callable = getattr(iomanager, method_name)
+        method_callable(iovalue=object())
+    
+    def test_coerce_input(self):
+        self.method_test('coerce_input')
+    
+    def test_coerce_output(self):
+        self.method_test('coerce_output')
+    
+    def test_verify_input(self):
+        self.method_test('verify_input')
+    
+    def test_verify_output(self):
+        self.method_test('verify_output')
+
+@pytest.mark.r
 class IOManagerTest(unittest.TestCase):
     """ Test the 'IOManager' class. """
     def process_test(
         self,
-        iomanager,
+        manager,
         process_kind,
-        iospec,
         iovals,
         expected=None,
         ):
         method_name = 'process_' + process_kind
-        process_method = getattr(iomanager, method_name)
-        result = process_method(iovals, required=iospec)
+        process_method = getattr(manager, method_name)
+        result = process_method(iovals)
         assert result == expected
+    
+    def make_iomanager(self, process_kind, iospec, **kwargs):
+        kwargs.update(
+            **{process_kind + '_required': iospec}
+            )
+        return IOManager(**kwargs)
 
 class TestIOManagerProcessBasic(IOManagerTest):
     def no_coercion_test(self, process_kind):
-        iomanager = IOManager()
-        
         iospec = {'a': object}
         expected = {'a': object()}
         iovals = expected.copy()
         
-        self.process_test(iomanager, process_kind, iospec, iovals, expected)
+        manager = self.make_iomanager(process_kind, iospec)
+        
+        self.process_test(manager, process_kind, iovals, expected)
     
+    @pytest.mark.s
     def test_process_input(self):
         self.no_coercion_test('input')
     
@@ -698,13 +722,13 @@ class TestIOManagerProcessCoercion(IOManagerTest):
         iovals,
         expected
         ):
-        iomanager = IOManager(
-            coercion_functions={self.InternalType: coercion_function}
+        manager = self.make_iomanager(
+            process_kind,
+            iospec={'a': self.InternalType},
+            coercion_functions={self.InternalType: coercion_function},
             )
         
-        iospec = {'a': self.InternalType}
-        
-        self.process_test(iomanager, process_kind, iospec, iovals, expected)
+        self.process_test(manager, process_kind, iovals, expected)
     
     def test_process_input(self):
         expected_value = self.InternalType()
@@ -736,15 +760,12 @@ class TestIOManagerProcessTypecheck(IOManagerTest):
         def reject_all(value, expected_type):
             raise ConfirmationError
         
-        iomanager = IOManager(
-            typecheck_functions={ExpectedType: reject_all}
-            )
-        
         iospec = {'a': ExpectedType}
         iovals = {'a': ExpectedType()}
+        manager = self.make_iomanager(process_kind, iospec)
         
         with pytest.raises(ConfirmationError):
-            self.process_test(iomanager, process_kind, iospec, iovals)
+            self.process_test(manager, process_kind, iospec, iovals)
     
     def test_process_input(self):
         self.typecheck_test('input')
@@ -770,13 +791,13 @@ class IOManagerPrecedenceTest(IOManagerTest):
                 },
             }
         
-        iomanager = IOManager(**init_kwargs)
-        
         iospec = {'a': ExpectedType}
         iovals = {'a': ExpectedType()}
         
+        manager = self.make_iomanager(process_kind, iospec, **init_kwargs)
+        
         with pytest.raises(ConfirmationError):
-            self.process_test(iomanager, process_kind, iospec, iovals)
+            self.process_test(manager, process_kind, iospec, iovals)
 
 class TestIOManagerPrecedenceCoercion(IOManagerPrecedenceTest):
     """ Confirm that 'input_coercion_functions' and 'output_coercion_functions'
@@ -815,25 +836,6 @@ class TestIOManagerPrecedenceTypecheck(IOManagerPrecedenceTest):
     
     def test_output_typecheck_functions_overrides(self):
         self.precedence_test('typecheck', 'output')
-
-class TestIOManagerMethods(unittest.TestCase):
-    """ Test the separate 'coerce' and 'verify' methods. """
-    def method_test(self, method_name):
-        iomanager = IOManager()
-        method_callable = getattr(iomanager, method_name)
-        method_callable(iovalue={})
-    
-    def test_coerce_input(self):
-        self.method_test('coerce_input')
-    
-    def test_coerce_output(self):
-        self.method_test('coerce_output')
-    
-    def test_verify_input(self):
-        self.method_test('verify_input')
-    
-    def test_verify_output(self):
-        self.method_test('verify_output')
 
 
 
