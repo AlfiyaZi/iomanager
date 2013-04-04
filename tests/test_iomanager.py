@@ -685,7 +685,7 @@ class IOManagerTest(unittest.TestCase):
     
     def make_iomanager(self, process_kind, iospec, **kwargs):
         kwargs.update(
-            **{process_kind + '_required': iospec}
+            **{process_kind + '_kwargs': {'required': iospec}}
             )
         return IOManager(**kwargs)
 
@@ -786,9 +786,11 @@ class IOManagerPrecedenceTest(IOManagerTest):
             '{}_functions'.format(process_stage): {
                 ExpectedType: overridden_function,
                 },
-            '{}_{}_functions'.format(process_kind, process_stage): {
-                ExpectedType: confirmed_function,
-                },
+            '{}_kwargs'.format(process_kind): {
+                '{}_functions'.format(process_stage): {
+                    ExpectedType: confirmed_function,
+                    },
+                }
             }
         
         iospec = {'a': ExpectedType}
