@@ -148,41 +148,26 @@ class TypeNameRepresentation(object):
 class IOProcessor(object):
     def __init__(
         self,
-        typecheck_functions=NotProvided,
-        coercion_functions=NotProvided,
         required=NotProvided,
         optional=NotProvided,
         unlimited=False,
+        typecheck_functions=NotProvided,
+        coercion_functions=NotProvided,
         ):
+        self.required = required
+        self.optional = optional
+        self.unlimited = unlimited
+        
         if typecheck_functions is not NotProvided:
             self.typecheck_functions = typecheck_functions.copy()
         if coercion_functions is not NotProvided:
             self.coercion_functions = coercion_functions.copy()
-        
-        # Defaults
-        self.required = required
-        self.optional = optional
-        self.unlimited = unlimited
     
-    def apply_defaults(self, *pargs):
-        names = ['required', 'optional', 'unlimited'][:len(pargs)]
-        pairs = zip(pargs, names)
-        return [
-            item if item is not NotProvided
-            else getattr(self, iname)
-            for item, iname in pairs
+    def verify(self, iovalue):
+        required, optional, unlimited = [
+            getattr(self, attr_name)
+            for attr_name in ['required', 'optional', 'unlimited']
             ]
-    
-    def verify(
-        self,
-        iovalue,
-        required=NotProvided,
-        optional=NotProvided,
-        unlimited=NotProvided,
-        ):
-        required, optional, unlimited = self.apply_defaults(
-            required, optional, unlimited
-            )
         
         combined_iospec = combine_iospecs(required, optional)
         
@@ -393,13 +378,12 @@ class IOProcessor(object):
         
         self.confirm_type_dict(iovals_dict, iospec, nonetype_ok=nonetype_ok)
     
-    def coerce(
-        self,
-        iovalue,
-        required=NotProvided,
-        optional=NotProvided,
-        ):
-        required, optional = self.apply_defaults(required, optional)
+    def coerce(self, iovalue):
+        required, optional = [
+            getattr(self, attr_name)
+            for attr_name in ['required', 'optional']
+            ]
+        
         combined_iospec = combine_iospecs(required, optional)
         
         return self.coerce_ioval(iovalue, combined_iospec)
@@ -475,15 +459,6 @@ class IOManager(object):
                     "__init__() got an unexpected keyword argument '{}'"
                     .format(ikey)
                     )
-        
-        #input_kwargs, output_kwargs = [
-        #    {
-        #        ikey[len(item):]: ivalue
-        #        for ikey, ivalue in kwargs.iteritems()
-        #        if ikey.startswith(item)
-        #        }
-        #    for item in ['input_', 'output_']
-        #    ]
         
         input_kwargs = self.get_operation_functions('input', kwargs)
         output_kwargs = self.get_operation_functions('output', kwargs)

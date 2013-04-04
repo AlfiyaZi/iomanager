@@ -62,11 +62,13 @@ output_coercion_functions = {
     datetime.datetime: coerce_datetime_output,
     }
 
-def input_processor():
-    return IOProcessor(coercion_functions=input_coercion_functions)
+def input_processor(**kwargs):
+    kwargs.setdefault('coercion_functions', input_coercion_functions)
+    return IOProcessor(**kwargs)
 
-def output_processor():
-    return IOProcessor(coercion_functions=output_coercion_functions)
+def output_processor(**kwargs):
+    kwargs.setdefault('coercion_functions', output_coercion_functions)
+    return IOProcessor(**kwargs)
 
 def io_manager():
     return IOManager(

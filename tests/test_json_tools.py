@@ -117,19 +117,21 @@ class TestTypeCoercionCycle(unittest.TestCase):
         result is equal to the starting value. """
     
     def coercion_cycle_test(self, type_obj, starting_value):
-        output_processor = iomanager.json_tools.output_processor()
-        input_processor = iomanager.json_tools.input_processor()
-        
         iospec =  {'value': type_obj}
+        
+        output_processor = iomanager.json_tools.output_processor(
+            required=iospec,
+            )
+        input_processor = iomanager.json_tools.input_processor(
+            required=iospec,
+            )
         
         output_result = output_processor.coerce(
             iovalue={'value': starting_value},
-            required=iospec,
             )
         
         final_result = input_processor.coerce(
             iovalue=output_result,
-            required=iospec,
             )
         
         final_value = final_result['value']
