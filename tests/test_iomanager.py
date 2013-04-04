@@ -603,150 +603,6 @@ class TestCoercionContainersPreserved(unittest.TestCase):
 
 
 
-# ------------------------- IOProcessor tests --------------------------
-
-class IOProcessorStashDefaultsTestCase(unittest.TestCase):
-    """ When 'required', 'optional', and 'unlimited' are provided to '__init__',
-        they are used as default argument values to 'verify' and 'coerce'. """
-    def get_method(self, parameter_name, parameter_value, **kwargs):
-        method_name = self.operation_name
-        kwargs.update({parameter_name: parameter_value})
-        processor = IOProcessor(**kwargs)
-        return getattr(processor, method_name)
-
-class IOManagerStashDefaultsTestCase(unittest.TestCase):
-    """ When 'input_required', 'output_required', etc. are provided to
-        '__init__', they are used as default argument values to 'verify_input',
-        'verify_output', etc. """
-    def get_method(self, parameter_name, parameter_value, **kwargs):
-        full_parameter_name = '_'.join([self.phase_name, parameter_name])
-        method_name = '_'.join([self.operation_name, self.phase_name])
-        
-        kwargs.update({full_parameter_name: parameter_value})
-        manager = IOManager(**kwargs)
-        return getattr(manager, method_name)
-
-class StashDefaultsVerifyTest(object):
-    def default_test(self, parameter_name):
-        method = self.get_method(parameter_name, CustomType)
-        with pytest.raises(VerificationFailureError):
-            method(iovalue=object())
-    
-    def override_test(self, parameter_name):
-        method = self.get_method(parameter_name, CustomType)
-        method(iovalue=object(), **{parameter_name: object})
-    
-    @pytest.mark.c
-    def test_default_required(self):
-        self.default_test('required')
-    
-    def test_default_optional(self):
-        self.default_test('optional')
-    
-    def test_override_required(self):
-        self.override_test('required')
-    
-    def test_override_optional(self):
-        self.override_test('optional')
-    
-    def unlimited_default_test(self, parameter_name):
-        method = self.get_method('unlimited', True)
-        method(iovalue=[object()], **{parameter_name: []})
-    
-    def test_unlimited_required(self):
-        self.unlimited_default_test('required')
-    
-    def test_unlimited_optional(self):
-        self.unlimited_default_test('optional')
-
-class TestIOProcessorStashDefaultsVerify(
-    StashDefaultsVerifyTest,
-    IOProcessorStashDefaultsTestCase,
-    ):
-    operation_name = 'verify'
-
-class IOManagerStashDefaultsVerifyTestCase(IOManagerStashDefaultsTestCase):
-    operation_name = 'verify'
-
-@pytest.mark.b
-class TestIOManagerStashDefaultsVerifyInput(
-    StashDefaultsVerifyTest,
-    IOManagerStashDefaultsVerifyTestCase,
-    ):
-    phase_name = 'input'
-
-@pytest.mark.b
-class TestIOManagerStashDefaultsVerifyOutput(
-    StashDefaultsVerifyTest,
-    IOManagerStashDefaultsVerifyTestCase,
-    ):
-    phase_name = 'output'
-
-class StashDefaultsCoerceTest(object):
-    def default_test(self, parameter_name):
-        method = self.get_method(parameter_name)
-        result = method(iovalue=BeforeCoercionType())
-        assert isinstance(result, YesCoercionType)
-    
-    def override_test(self, parameter_name):
-        initial_value = object()
-        method = self.get_method(parameter_name)
-        result = method(iovalue=initial_value, **{parameter_name: object})
-        assert result is initial_value
-    
-    def test_default_required(self):
-        self.default_test('required')
-    
-    def test_default_optional(self):
-        self.default_test('optional')
-    
-    def test_override_required(self):
-        self.override_test('required')
-    
-    def test_override_optional(self):
-        self.override_test('optional')
-
-class TestIOProcessorStashDefaultsCoerce(
-    StashDefaultsCoerceTest,
-    IOProcessorStashDefaultsTestCase,
-    ):
-    operation_name = 'coerce'
-    
-    def get_method(self, parameter_name):
-        return IOProcessorStashDefaultsTestCase.get_method(
-            self,
-            parameter_name,
-            YesCoercionType,
-            coercion_functions={YesCoercionType: coerce_custom}
-            )
-
-class IOManagerStashDefaultsCoerceTestCase(IOManagerStashDefaultsTestCase):
-    operation_name = 'coerce'
-    
-    def get_method(self, parameter_name):
-        return IOManagerStashDefaultsTestCase.get_method(
-            self,
-            parameter_name,
-            YesCoercionType,
-            coercion_functions={YesCoercionType: coerce_custom}
-            )
-
-@pytest.mark.a
-class TestIOManagerStashDefaultsCoerceInput(     
-    StashDefaultsCoerceTest,
-    IOManagerStashDefaultsCoerceTestCase,
-    ):
-    phase_name = 'input'
-
-@pytest.mark.a
-class TestIOManagerStashDefaultsCoerceOutput(     
-    StashDefaultsCoerceTest,
-    IOManagerStashDefaultsCoerceTestCase,
-    ):
-    phase_name = 'output'
-
-
-
 # -------------------------- IOManager tests ---------------------------
 
 class IOManagerTest(unittest.TestCase):
@@ -932,6 +788,231 @@ class TestIOManagerMethods(unittest.TestCase):
     
     def test_verify_output(self):
         self.method_test('verify_output')
+
+
+
+# ----------------------- __init__ defaults tests ------------------------
+
+class IOProcessorStashDefaultsTestCase(unittest.TestCase):
+    """ When 'required', 'optional', and 'unlimited' are provided to '__init__',
+        they are used as default argument values to 'verify' and 'coerce'. """
+    def get_method(self, parameter_name, parameter_value, **kwargs):
+        method_name = self.operation_name
+        kwargs.update({parameter_name: parameter_value})
+        processor = IOProcessor(**kwargs)
+        return getattr(processor, method_name)
+
+class IOManagerStashDefaultsTestCase(unittest.TestCase):
+    """ When 'input_required', 'output_required', etc. are provided to
+        '__init__', they are used as default argument values to 'verify_input',
+        'verify_output', etc. """
+    def get_method(self, parameter_name, parameter_value, **kwargs):
+        full_parameter_name = '_'.join([self.phase_name, parameter_name])
+        method_name = '_'.join([self.operation_name, self.phase_name])
+        
+        kwargs.update({full_parameter_name: parameter_value})
+        manager = IOManager(**kwargs)
+        return getattr(manager, method_name)
+
+class StashDefaultsVerifyTest(object):
+    def default_test(self, parameter_name):
+        method = self.get_method(parameter_name, CustomType)
+        with pytest.raises(VerificationFailureError):
+            method(iovalue=object())
+    
+    def override_test(self, parameter_name):
+        method = self.get_method(parameter_name, CustomType)
+        method(iovalue=object(), **{parameter_name: object})
+    
+    def test_default_required(self):
+        self.default_test('required')
+    
+    def test_default_optional(self):
+        self.default_test('optional')
+    
+    def test_override_required(self):
+        self.override_test('required')
+    
+    def test_override_optional(self):
+        self.override_test('optional')
+    
+    def unlimited_default_test(self, parameter_name):
+        method = self.get_method('unlimited', True)
+        method(iovalue=[object()], **{parameter_name: []})
+    
+    def test_unlimited_required(self):
+        self.unlimited_default_test('required')
+    
+    def test_unlimited_optional(self):
+        self.unlimited_default_test('optional')
+
+class TestIOProcessorStashDefaultsVerify(
+    StashDefaultsVerifyTest,
+    IOProcessorStashDefaultsTestCase,
+    ):
+    operation_name = 'verify'
+
+class IOManagerStashDefaultsVerifyTestCase(IOManagerStashDefaultsTestCase):
+    operation_name = 'verify'
+
+class TestIOManagerStashDefaultsVerifyInput(
+    StashDefaultsVerifyTest,
+    IOManagerStashDefaultsVerifyTestCase,
+    ):
+    phase_name = 'input'
+
+class TestIOManagerStashDefaultsVerifyOutput(
+    StashDefaultsVerifyTest,
+    IOManagerStashDefaultsVerifyTestCase,
+    ):
+    phase_name = 'output'
+
+class StashDefaultsCoerceTest(object):
+    def default_test(self, parameter_name):
+        method = self.get_method(parameter_name)
+        result = method(iovalue=BeforeCoercionType())
+        assert isinstance(result, YesCoercionType)
+    
+    def override_test(self, parameter_name):
+        initial_value = object()
+        method = self.get_method(parameter_name)
+        result = method(iovalue=initial_value, **{parameter_name: object})
+        assert result is initial_value
+    
+    def test_default_required(self):
+        self.default_test('required')
+    
+    def test_default_optional(self):
+        self.default_test('optional')
+    
+    def test_override_required(self):
+        self.override_test('required')
+    
+    def test_override_optional(self):
+        self.override_test('optional')
+
+class TestIOProcessorStashDefaultsCoerce(
+    StashDefaultsCoerceTest,
+    IOProcessorStashDefaultsTestCase,
+    ):
+    operation_name = 'coerce'
+    
+    def get_method(self, parameter_name):
+        return IOProcessorStashDefaultsTestCase.get_method(
+            self,
+            parameter_name,
+            YesCoercionType,
+            coercion_functions={YesCoercionType: coerce_custom}
+            )
+
+class IOManagerStashDefaultsCoerceTestCase(IOManagerStashDefaultsTestCase):
+    operation_name = 'coerce'
+    
+    def get_method(self, parameter_name):
+        return IOManagerStashDefaultsTestCase.get_method(
+            self,
+            parameter_name,
+            YesCoercionType,
+            coercion_functions={YesCoercionType: coerce_custom}
+            )
+
+class TestIOManagerStashDefaultsCoerceInput(     
+    StashDefaultsCoerceTest,
+    IOManagerStashDefaultsCoerceTestCase,
+    ):
+    phase_name = 'input'
+
+class TestIOManagerStashDefaultsCoerceOutput(     
+    StashDefaultsCoerceTest,
+    IOManagerStashDefaultsCoerceTestCase,
+    ):
+    phase_name = 'output'
+
+# ----------------------- Subclass defaults tests ------------------------
+
+@pytest.mark.b
+class TestIOProcessorSubclassDefaults(unittest.TestCase):
+    """ 'coercion_functions' and 'typecheck_functions' can be set as defaults
+        in a subclass definition. """
+    def typecheck_test(self, value, **kwargs):
+        def reject_value(value, expected_type):
+            raise TypeCheckFailureError
+        class CustomIOProcessor(IOProcessor):
+            typecheck_functions = {CustomType: reject_value}
+        CustomIOProcessor(**kwargs).verify(iovalue=value)
+    
+    def test_typecheck_defaults(self):
+        with pytest.raises(VerificationFailureError):
+            self.typecheck_test(CustomType())
+    
+    def test_typecheck_init_overrides(self):
+        self.typecheck_test(CustomType(), typecheck_functions={})
+    
+    def get_coercion_result(self, value, **kwargs):
+        class CustomIOProcessor(IOProcessor):
+            coercion_functions = {YesCoercionType: coerce_custom}
+        return CustomIOProcessor(**kwargs).coerce(iovalue=value)
+    
+    def test_coercion_defaults(self):
+        result = self.get_coercion_result(BeforeCoercionType())
+        assert isinstance(result, YesCoercionType)
+    
+    def test_coercion_init_overrides(self):
+        initial_value = BeforeCoercionType()
+        result = self.get_coercion_result(initial_value, coercion_functions={})
+        assert result is initial_value
+
+@pytest.mark.a
+class TestIOManagerSubclassDefaults(unittest.TestCase):
+    """ '...coercion_functions' and '...typecheck_functions' can be set as
+        defaults in a subclass definition. """
+    def typecheck_test(self, value, phase_name, attr_part='', **kwargs):
+        def reject_value(value, expected_type):
+            raise TypeCheckFailureError
+        
+        class CustomIOManager(IOManager):
+            pass
+        
+        attr_name = '_'.join(filter(None, [attr_part, 'typecheck_functions']))
+        setattr(CustomIOManager, attr_name, {CustomType: reject_value})
+        
+        method_name = 'verify_' + phase_name
+        manager = CustomIOManager(**kwargs)
+        method = getattr(manager, method_name)
+        
+        method(iovalue=value)
+    
+    def typecheck_defaults_test(self, phase_name, *pargs, **kwargs):
+        with pytest.raises(VerificationFailureError):
+            self.typecheck_test(CustomType(), phase_name, *pargs, **kwargs)
+    
+    def typecheck_init_overrides_test(self, phase_name, *pargs, **kwargs):
+        kwargs.update({'typecheck_functions': {}})
+        self.typecheck_test(CustomType(), phase_name, *pargs, **kwargs)
+    
+    def test_typecheck_defaults_input(self):
+        self.typecheck_defaults_test('input')
+    
+    def test_typecheck_defaults_output(self):
+        self.typecheck_defaults_test('output')
+    
+    def test_typecheck_init_overrides_input(self):
+        self.typecheck_init_overrides_test('input')
+    
+    def test_typecheck_init_overrides_output(self):
+        self.typecheck_init_overrides_test('output')
+    
+    def test_typecheck_specific_defaults_input(self):
+        self.typecheck_defaults_test('input', 'input')
+    
+    def test_typecheck_specific_defaults_output(self):
+        self.typecheck_defaults_test('output', 'output')
+    
+    def test_typechcek_specific_init_overrides_input(self):
+        self.typecheck_init_overrides_test('input', 'input')
+    
+    def test_typechcek_specific_init_overrides_output(self):
+        self.typecheck_init_overrides_test('output', 'output')
 
 
 
