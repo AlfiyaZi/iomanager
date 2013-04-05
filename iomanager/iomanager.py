@@ -437,6 +437,7 @@ class IOProcessor(object):
         return result_list
 
 class IOManager(object):
+    
     def __init__(
         self,
         input_kwargs={},
@@ -444,18 +445,45 @@ class IOManager(object):
         typecheck_functions=NotProvided,
         coercion_functions=NotProvided,
         ):
-        input_kwargs = input_kwargs or getattr(self, 'input_kwargs', {})
-        output_kwargs = output_kwargs or getattr(self, 'output_kwargs', {})
+        # Lowest precedence - General defaults from (sub)class attributes.
+        default_general_kwargs = {
+            ikey: getattr(self, ikey, NotProvided)
+            for ikey in ['typecheck_functions', 'coercion_functions']
+            }
         
-        for item, ikey in [
-            (typecheck_functions, 'typecheck_functions'),
-            (coercion_functions, 'coercion_functions'),
-            ]:
-            for ikwargs in [input_kwargs, output_kwargs]:
-                ikwargs.setdefault(ikey, item)
+        # Next precedence - Specific defaults from (sub)class attributes.
+        default_input_kwargs, default_output_kwargs = [
+            getattr(self, ikey, {})
+            for ikey in ['input_kwargs', 'output_kwargs']
+            ]
         
-        self.input_processor = IOProcessor(**input_kwargs)
-        self.output_processor = IOProcessor(**output_kwargs)
+        # Next precedence - General kwargs from constructor arguments.
+        general_kwargs = {
+            ikey: ivalue
+            for ikey, ivalue in [
+                ('typecheck_functions', typecheck_functions),
+                ('coercion_functions', coercion_functions),
+                ]
+            if ivalue is not NotProvided
+            }
+        
+        # Start with the lowest precedence, update with higher-precedence.
+        total_input_kwargs, total_output_kwargs = [
+            default_general_kwargs.copy() for i in range(2)
+            ]
+        
+        total_input_kwargs.update(default_input_kwargs)
+        total_output_kwargs.update(default_output_kwargs)
+        
+        for ikwargs in [total_input_kwargs, total_output_kwargs]:
+            ikwargs.update(general_kwargs)
+        
+        # Highest precedence - specific kwargs from constructor arguments.
+        total_input_kwargs.update(input_kwargs)
+        total_output_kwargs.update(output_kwargs)
+        
+        self.input_processor = IOProcessor(**total_input_kwargs)
+        self.output_processor = IOProcessor(**total_output_kwargs)
     
     def process_input(self, iovalue):
         """ coerce(), then verify(). """

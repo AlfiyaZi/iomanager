@@ -470,7 +470,6 @@ class CoercionTestCase(unittest.TestCase):
             )
         return IOProcessor(**kwargs)
 
-@pytest.mark.c
 class CoercionTest(object):
     def no_coercion_test(self, parameter_name):
         uncoerced_value = BeforeCoercionType()
@@ -827,21 +826,17 @@ class TestIOManagerPrecedenceTypecheck(IOManagerPrecedenceTest):
 
 
 
-# ----------------------- Subclass defaults tests ------------------------
+# ----------------------- Class-attribute defaults -----------------------
 
-@pytest.mark.xfail
-@pytest.mark.waiting
-@pytest.mark.o
-class TestIOProcessorSubclassDefaults(unittest.TestCase):
+class TestIOProcessorClassAttributeDefaults(unittest.TestCase):
     """ 'coercion_functions' and 'typecheck_functions' can be set as defaults
         in a subclass definition. """
     def typecheck_test(self, value, **kwargs):
         class CustomIOProcessor(IOProcessor):
             typecheck_functions = {CustomType: custom_typecheck_reject_function}
-        CustomIOProcessor(**kwargs).verify(
-            iovalue=value,
-            required=CustomType,
-            )
+        
+        kwargs.update(required=CustomType)
+        CustomIOProcessor(**kwargs).verify(iovalue=value)
     
     def test_typecheck_defaults(self):
         with pytest.raises(VerificationFailureError):
@@ -853,10 +848,9 @@ class TestIOProcessorSubclassDefaults(unittest.TestCase):
     def get_coercion_result(self, value, **kwargs):
         class CustomIOProcessor(IOProcessor):
             coercion_functions = {YesCoercionType: custom_coercion_function}
-        return CustomIOProcessor(**kwargs).coerce(
-            iovalue=value,
-            required=YesCoercionType,
-            )
+        
+        kwargs.update(required=YesCoercionType)
+        return CustomIOProcessor(**kwargs).coerce(iovalue=value)
     
     def test_coercion_defaults(self):
         result = self.get_coercion_result(BeforeCoercionType())
@@ -867,25 +861,35 @@ class TestIOProcessorSubclassDefaults(unittest.TestCase):
         result = self.get_coercion_result(initial_value, coercion_functions={})
         assert result is initial_value
 
-class IOManagerSubclassDefaultsTest(object):
-    def operation_test(self, value, phase_name, attr_part='', **kwargs):
+class IOManagerClassAttributeDefaultsTest(object):
+    def operation_test(self, value, phase_name, phase_kwargs=False, **kwargs):
         class CustomIOManager(IOManager):
             pass
         
-        attr_name = '_'.join(
-            filter(None, [attr_part, self.functions_kind, 'functions'])
-            )
-        setattr(CustomIOManager, attr_name, self.get_custom_functions())
+        attr_key = self.functions_kind + '_functions'
+        
+        phase_key = phase_name + '_kwargs'
+        
+        if not phase_kwargs:
+            setattr(CustomIOManager, attr_key, self.get_custom_functions())
+        else:
+            setattr(
+                CustomIOManager,
+                phase_key,
+                {attr_key: self.get_custom_functions()}
+                )
+        
+        kwargs.setdefault(phase_key, {})
+        kwargs[phase_key]['required'] = self.required_type
+        
+        manager = CustomIOManager(**kwargs)
         
         method_name = '_'.join([self.operation_name, phase_name])
-        manager = CustomIOManager(**kwargs)
         method = getattr(manager, method_name)
         
-        return method(
-            iovalue=value,
-            required=self.required_type
-            )
+        return method(iovalue=value)
     
+    @pytest.mark.d
     def test_operation_defaults_input(self):
         self.operation_defaults_test('input')
     
@@ -898,9 +902,6 @@ class IOManagerSubclassDefaultsTest(object):
     def test_operation_overrides_output(self):
         self.operation_overrides_test('output')
     
-    @pytest.mark.xfail
-    @pytest.mark.waiting
-    @pytest.mark.z
     def test_operation_specific_defaults_input(self):
         self.operation_defaults_test('input', 'input')
     
@@ -913,11 +914,8 @@ class IOManagerSubclassDefaultsTest(object):
     def test_operation_specific_overrides_output(self):
         self.operation_overrides_test('output', 'output')
 
-@pytest.mark.xfail
-@pytest.mark.waiting
-@pytest.mark.y
-class TestIOManagerSubclassDefaultsVerify(
-    IOManagerSubclassDefaultsTest,
+class TestIOManagerClassAttributeDefaultsVerify(
+    IOManagerClassAttributeDefaultsTest,
     unittest.TestCase,
     ):
     """ '...typecheck_functions' can be set as a default in a subclass
@@ -937,11 +935,8 @@ class TestIOManagerSubclassDefaultsVerify(
         kwargs.update({'typecheck_functions': {}})
         self.operation_test(CustomType(), *pargs, **kwargs)
 
-@pytest.mark.xfail
-@pytest.mark.waiting
-@pytest.mark.x
-class TestIOManagerSubclassDefaultsCoerce(
-    IOManagerSubclassDefaultsTest,
+class TestIOManagerClassAttributeDefaultsCoerce(
+    IOManagerClassAttributeDefaultsTest,
     unittest.TestCase,
     ):
     """ '...coercion_functions' can be set as a default in a subclass
