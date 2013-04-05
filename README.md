@@ -50,7 +50,7 @@ from iomanager import IOManager, VerificationFailureError, ListOf
 def api_method(a, b, c=False):
     """ Do something, return some value. """
     return_value = {
-        'when': datetime.datetime.utcnow(),
+        'response_timestamp': datetime.datetime.utcnow(),
         'result': {
             'x': unicode(a.lower()),
             'y': sum(b)
@@ -70,30 +70,32 @@ def coerce_datetime_output(value):
 
 def handle_request(request):
     manager = IOManager(
-        output_coercion_functions={datetime.datetime: coerce_datetime_output}
+        input={
+            'required': {'a': unicode, 'b': ListOf(int)},
+            'optional': {'c': bool},
+            },
+        output={
+            'required': {
+                'response_timestamp': datetime.datetime,
+                'result': {'x': unicode, 'y':int}
+                },
+            'optional': {
+                'result': {'z': bool}
+                },
+            'coercion_functions': {datetime.datetime: coerce_datetime_output},
+            }
         )
     
     input_values = json.loads(request.body)
     try:
-        coerced_input_values = manager.process_input(
-            iovalue=input_values,
-            required={'a': unicode, 'b': ListOf(int)},
-            optional={'c': bool},
-            )
+        coerced_input_values = manager.process_input(iovalue=input_values)
     except VerificationFailureError as exc:
         return webob.Response(status=400, body=exc.error_msg)
     
     result_values = api_method(**coerced_input_values)
     
     try:
-        coerced_result_values = manager.process_output(
-            iovalue=result_values,
-            required={
-                'when': datetime.datetime,
-                'result': {'x': unicode, 'y':int}
-                },
-            optional={'result': {'z': bool}}
-            )
+        coerced_result_values = manager.process_output(iovalue=result_values)
     except VerificationFailureError:
         return webob.Response(status=500, body=exc.error_msg)
     
@@ -160,9 +162,8 @@ def handle_request(request):
     input_values = json.loads(request.body)
     
     try:
-        IOManager().verify_input(
-            iovalue=input_values,
-            required={'x': int, 'y': int}
+        IOManager(input={'required': {'x': int, 'y': int}}).verify_input(
+            iovalue=input_values
             )
     except VerificationFailureError as exc:
         return webob.response(status=400, body=exc.error_msg)
@@ -245,23 +246,23 @@ def coerce_datetime_output(value):
         return value
 
 manager = IOManager(
-    input_coercion_functions={datetime.datetime: coerce_datetime_input},
-    output_coercion_functions={datetime.datetime: coerce_datetime_output},
+    input={
+        'required': {'some_date': datetime.datetime},
+        'coercion_functions': {datetime.datetime: coerce_datetime_input}
+        },
+    output={
+        'required': datetime.datetime,
+        'coercion_functions': {datetime.datetime: coerce_datetime_output}
+        },
     )
 
 def handle_request(request):
     input_values = json.loads(request.body)
-    coerced_input_values = manager.coerce_input(
-        iovalue=input_values,
-        required={'some_date': datetime.datetime},
-        )
+    coerced_input_values = manager.coerce_input(iovalue=input_values)
     
     result = api_method_nextweek(**coerced_input_values)
     
-    coerced_result = manager.coerce_output(
-        iovalue=result,
-        required=datetime.datetime,
-        )
+    coerced_result = manager.coerce_output(iovalue=result)
     return webob.response(body=json.dumps(coerced_result))
 ```
 
@@ -290,21 +291,18 @@ import iomanager
 def api_method_nextweek(some_date):
     return some_date + timedelta(days=7)
 
-manager = iomanager.json_tools.io_manager()
+manager = iomanager.json_tools.io_manager(
+    input={'required': {'some_date': datetime.datetime}},
+    output={'required': datetime.datetime}
+    )
 
 def handle_request(request):
     input_values = json.loads(request.body)
-    coerced_input_values = manager.coerce_input(
-        iovalue=input_values,
-        required={'some_date': datetime.datetime},
-        )
+    coerced_input_values = manager.coerce_input(iovalue=input_values)
     
     result = api_method_nextweek(**coerced_input_values)
     
-    coerced_result = manager.coerce_output(
-        iovalue=result,
-        required=datetime.datetime,
-        )
+    coerced_result = manager.coerce_output(iovalue=result)
     return webob.response(body=json.dumps(coerced_result))
 ```
 

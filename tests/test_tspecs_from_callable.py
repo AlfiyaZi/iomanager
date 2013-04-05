@@ -20,7 +20,7 @@ class ResultTest(object):
             for ikey in item:
                 iovals.setdefault(ikey, None)
         
-        IOProcessor().verify(iovals, **result)
+        IOProcessor(**result).verify(iovals)
 
 class IOSpecValueTest(unittest.TestCase):
     def iospec_value_test(self, iospec_name, expected_list):
