@@ -28,3 +28,9 @@ v0.3.0, 2013-04-02 -- Stable
   tools, so now their names reflect that. Move JSON tools into 'json_tools'
   module.
 - Completely refactor tests.
+
+v0.3.1, 2013-04-05 -- Calling semantics.
+- Change calling semantics. 'iospec' values ('required', 'optional', 'unlimited')
+  are now passed to the 'IOManager' or 'IOProcessor' constructor, and only the
+  'iovalue' value is passed to the 'verify' and 'coerce' methods.
+- Default values can be set with class attributes.
