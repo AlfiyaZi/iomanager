@@ -10,8 +10,11 @@ from iomanager import (
     IOProcessor,
     IOManager,
     VerificationFailureError,
+    InputVerificationFailureError,
+    OutputVerificationFailureError,
     TypeCheckSuccessError,
     TypeCheckFailureError,
+    ListOf,
     )
 
 _NotSet = object()
@@ -35,7 +38,7 @@ class BeforeCoercionType(object):
 class YesCoercionType(object):
     """ A type with a custom coercion function. """
 
-def custom_coercion_function(value):
+def custom_coercion_function(value, expected_type):
     if isinstance(value, BeforeCoercionType):
         return YesCoercionType()
     return value
@@ -232,7 +235,7 @@ class TestVerifyTypeCheckListOfIOSpec(
     unittest.TestCase,
     ):
     def wrap_iospec(self, iospec):
-        return iomanager.ListOf(iospec)
+        return ListOf(iospec)
     
     def wrap_iovalue(self, iovalue):
         return [iovalue]
@@ -380,67 +383,7 @@ class VerifyStructureUnlimitedTest(object):
     def test_unlimited_optional(self):
         self.unlimited_test('optional')
 
-class TestVerifyStructureListIOSpec(
-    VerifyStructureBasicTest,
-    VerifyStructureStrictTest,
-    VerifyStructureUnlimitedTest,
-    unittest.TestCase,
-    ):
-    def make_iospec(self, length):
-        return [object for i in range(length)]
-    
-    def make_iovalue(self, length, maker=object):
-        return [maker() for i in range(length)]
-
-class TestVerifyStructureTupleIOSpec(
-    VerifyStructureBasicTest,
-    VerifyStructureStrictTest,
-    VerifyStructureUnlimitedTest,
-    unittest.TestCase,
-    ):
-    def make_iospec(self, length):
-        return tuple([object for i in range(length)])
-    
-    def make_iovalue(self, length, maker=object):
-        return tuple([maker() for i in range(length)])
-
-class TestVerifyStructureDictIOSpec(
-    VerifyStructureBasicTest,
-    VerifyStructureStrictTest,
-    VerifyStructureUnlimitedTest,
-    unittest.TestCase,
-    ):
-    def make_iospec(self, length):
-        keys = list('abc')
-        return {keys[i]: object for i in range(length)}
-    
-    def make_iovalue(self, length, maker=object):
-        keys = list('abc')
-        return {keys[i]: maker() for i in range(length)}
-
-class TestVerifyStructureListOfIOSpec(
-    VerifyStructureBasicTest,
-    unittest.TestCase,
-    ):
-    def make_iospec(self, length):
-        return iomanager.ListOf(object)
-    
-    def make_iovalue(self, length, maker=object):
-        return [maker() for i in range(length)]
-
-class TestVerifyStructureNestedIOSpec(
-    VerifyStructureBasicTest,
-    VerifyStructureStrictTest,
-    unittest.TestCase,
-    ):
-    def make_iospec(self, length):
-        keys = list('abc')
-        return {'x': {keys[i]: object for i in range(length)}}
-    
-    def make_iovalue(self, length, maker=object):
-        keys = list('abc')
-        return {'x': {keys[i]: maker() for i in range(length)}}
-    
+class VerifyStructureNestedTest(object):
     def unlimited_extra_nested_item_raises_test(self, parameter_name):
         """ When 'unlimited' is True, only top-level keyword arguments are
             unlimited. 'dict'-type iovalues should still be checked for unknown
@@ -459,6 +402,68 @@ class TestVerifyStructureNestedIOSpec(
     def test_unlimited_extra_nested_item_raises_optional(self):
         self.unlimited_extra_nested_item_raises_test('optional')
 
+class TestVerifyStructureListIOSpec(
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureUnlimitedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return [object for i in range(length)]
+    
+    def make_iovalue(self, length):
+        return [object() for i in range(length)]
+
+class TestVerifyStructureTupleIOSpec(
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureUnlimitedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return tuple([object for i in range(length)])
+    
+    def make_iovalue(self, length):
+        return tuple([object() for i in range(length)])
+
+class TestVerifyStructureDictIOSpec(
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureUnlimitedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        keys = list('abc')
+        return {keys[i]: object for i in range(length)}
+    
+    def make_iovalue(self, length):
+        keys = list('abc')
+        return {keys[i]: object() for i in range(length)}
+
+class TestVerifyStructureListOfIOSpec(
+    VerifyStructureBasicTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return ListOf(object)
+    
+    def make_iovalue(self, length):
+        return [object() for i in range(length)]
+
+class TestVerifyStructureNestedDictDictIOSpec(
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureNestedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        keys = list('abc')
+        return {'x': {keys[i]: object for i in range(length)}}
+    
+    def make_iovalue(self, length):
+        keys = list('abc')
+        return {'x': {keys[i]: object() for i in range(length)}}
+
 
 
 # --------------------------- Coercion tests ---------------------------
@@ -474,7 +479,6 @@ class CoercionTest(object):
     def no_coercion_test(self, parameter_name):
         uncoerced_value = BeforeCoercionType()
         
-        #coercion_result = self.ioprocessor.coerce(
         coercion_result = self.ioprocessor(
             **{parameter_name: self.wrap_iospec(object)}
             ).coerce(
@@ -492,7 +496,6 @@ class CoercionTest(object):
         self.no_coercion_test('optional')
     
     def yes_coercion_test(self, parameter_name):
-        #coercion_result = self.ioprocessor.coerce(
         coercion_result = self.ioprocessor(
             **{parameter_name: self.wrap_iospec(YesCoercionType)}
             ).coerce(
@@ -512,7 +515,6 @@ class CoercionTest(object):
     def test_required_overrides_optional(self):
         uncoerced_value = BeforeCoercionType()
         
-        #coercion_result = self.ioprocessor.coerce(
         coercion_result = self.ioprocessor(
             required=self.wrap_iospec(YesCoercionType),
             optional=self.wrap_iospec(object),
@@ -566,7 +568,7 @@ class TestCoerceDictIOSpec(CoercionTest, CoercionTestCase):
 
 class TestCoerceListOfIOSpec(CoercionTest, CoercionTestCase):
     def wrap_iospec(self, iospec):
-        return iomanager.ListOf(iospec)
+        return ListOf(iospec)
     
     def wrap_iovalue(self, iovalue):
         return [iovalue]
@@ -651,6 +653,31 @@ class TestIOManagerMethods(unittest.TestCase):
     def test_verify_output(self):
         self.method_test('verify_output')
 
+class TestIOManagerVerificationErrors(unittest.TestCase):
+    """ IOManager raises 'InputVerificationFailuerError' and
+        'OutputVerificationFailureError' depending on whether an 'input...' or
+        'output...' method is being used. """
+    
+    def error_test(self, method_kind, phase, error_class):
+        kwargs_key = phase + '_kwargs'
+        manager = IOManager(**{kwargs_key: {'required': CustomType}})
+        method_name = '_'.join([method_kind, phase])
+        method = getattr(manager, method_name)
+        with pytest.raises(error_class):
+            method(iovalue=object())
+    
+    def test_verify_input_error(self):
+        self.error_test('verify', 'input', InputVerificationFailureError)
+    
+    def test_verify_output_error(self):
+        self.error_test('verify', 'output', OutputVerificationFailureError)
+    
+    def test_process_input_error(self):
+        self.error_test('process', 'input', InputVerificationFailureError)
+    
+    def test_process_output_error(self):
+        self.error_test('process', 'output', OutputVerificationFailureError)
+
 class IOManagerTest(unittest.TestCase):
     """ Test the 'IOManager' class. """
     def process_test(
@@ -714,7 +741,7 @@ class TestIOManagerProcessCoercion(IOManagerTest):
     def test_process_input(self):
         expected_value = self.InternalType()
         
-        def coercion_function(value):
+        def coercion_function(value, expected_type):
             return expected_value
         
         iovals = {'a': self.ExternalType()}
@@ -725,7 +752,7 @@ class TestIOManagerProcessCoercion(IOManagerTest):
     def test_process_output(self):
         expected_value = self.ExternalType()
         
-        def coercion_function(value):
+        def coercion_function(value, expected_type):
             return expected_value
         
         iovals = {'a': self.InternalType()}
@@ -791,10 +818,10 @@ class TestIOManagerPrecedenceCoercion(IOManagerPrecedenceTest):
         each override 'coercion_functions'. """
     
     def make_functions(self):
-        def overridden_function(value):
+        def overridden_function(value, expected_type):
             pass
         
-        def confirmed_function(value):
+        def confirmed_function(value, expected_type):
             raise ConfirmationError
         
         return overridden_function, confirmed_function
@@ -889,7 +916,6 @@ class IOManagerClassAttributeDefaultsTest(object):
         
         return method(iovalue=value)
     
-    @pytest.mark.d
     def test_operation_defaults_input(self):
         self.operation_defaults_test('input')
     
@@ -957,6 +983,26 @@ class TestIOManagerClassAttributeDefaultsCoerce(
         initial_value = BeforeCoercionType()
         result = self.operation_test(initial_value, *pargs, **kwargs)
         assert result is initial_value
+
+
+
+# ----------------------------- ListOf tests -----------------------------
+
+class TestListOfNestedContainers(unittest.TestCase):
+    """ Initialize ListOf with all possible nested containers to confirm that
+        they pass. """
+    
+    def test_list(self):
+        ListOf([object])
+    
+    def test_tuple(self):
+        ListOf(tuple([object]))
+    
+    def test_dict(self):
+        ListOf({'a': object})
+    
+    def test_listof(self):
+        ListOf(ListOf(object))
 
 
 
