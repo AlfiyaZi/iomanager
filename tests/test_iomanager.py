@@ -12,6 +12,7 @@ from iomanager import (
     VerificationFailureError,
     TypeCheckSuccessError,
     TypeCheckFailureError,
+    ListOf,
     )
 
 _NotSet = object()
@@ -232,7 +233,7 @@ class TestVerifyTypeCheckListOfIOSpec(
     unittest.TestCase,
     ):
     def wrap_iospec(self, iospec):
-        return iomanager.ListOf(iospec)
+        return ListOf(iospec)
     
     def wrap_iovalue(self, iovalue):
         return [iovalue]
@@ -442,7 +443,7 @@ class TestVerifyStructureListOfIOSpec(
     unittest.TestCase,
     ):
     def make_iospec(self, length):
-        return iomanager.ListOf(object)
+        return ListOf(object)
     
     def make_iovalue(self, length):
         return [object() for i in range(length)]
@@ -476,7 +477,6 @@ class CoercionTest(object):
     def no_coercion_test(self, parameter_name):
         uncoerced_value = BeforeCoercionType()
         
-        #coercion_result = self.ioprocessor.coerce(
         coercion_result = self.ioprocessor(
             **{parameter_name: self.wrap_iospec(object)}
             ).coerce(
@@ -494,7 +494,6 @@ class CoercionTest(object):
         self.no_coercion_test('optional')
     
     def yes_coercion_test(self, parameter_name):
-        #coercion_result = self.ioprocessor.coerce(
         coercion_result = self.ioprocessor(
             **{parameter_name: self.wrap_iospec(YesCoercionType)}
             ).coerce(
@@ -514,7 +513,6 @@ class CoercionTest(object):
     def test_required_overrides_optional(self):
         uncoerced_value = BeforeCoercionType()
         
-        #coercion_result = self.ioprocessor.coerce(
         coercion_result = self.ioprocessor(
             required=self.wrap_iospec(YesCoercionType),
             optional=self.wrap_iospec(object),
@@ -568,7 +566,7 @@ class TestCoerceDictIOSpec(CoercionTest, CoercionTestCase):
 
 class TestCoerceListOfIOSpec(CoercionTest, CoercionTestCase):
     def wrap_iospec(self, iospec):
-        return iomanager.ListOf(iospec)
+        return ListOf(iospec)
     
     def wrap_iovalue(self, iovalue):
         return [iovalue]
@@ -891,7 +889,6 @@ class IOManagerClassAttributeDefaultsTest(object):
         
         return method(iovalue=value)
     
-    @pytest.mark.d
     def test_operation_defaults_input(self):
         self.operation_defaults_test('input')
     
@@ -959,6 +956,29 @@ class TestIOManagerClassAttributeDefaultsCoerce(
         initial_value = BeforeCoercionType()
         result = self.operation_test(initial_value, *pargs, **kwargs)
         assert result is initial_value
+
+
+
+# ----------------------------- ListOf tests -----------------------------
+
+@pytest.mark.a
+class TestListOfNestedContainers(unittest.TestCase):
+    """ Initialize ListOf with all possible nested containers to confirm that
+        they pass. """
+    
+    @pytest.mark.c
+    def test_list(self):
+        ListOf([object])
+    
+    @pytest.mark.b
+    def test_tuple(self):
+        ListOf(tuple([object]))
+    
+    def test_dict(self):
+        ListOf({'a': object})
+    
+    def test_listof(self):
+        ListOf(ListOf(object))
 
 
 
