@@ -380,67 +380,7 @@ class VerifyStructureUnlimitedTest(object):
     def test_unlimited_optional(self):
         self.unlimited_test('optional')
 
-class TestVerifyStructureListIOSpec(
-    VerifyStructureBasicTest,
-    VerifyStructureStrictTest,
-    VerifyStructureUnlimitedTest,
-    unittest.TestCase,
-    ):
-    def make_iospec(self, length):
-        return [object for i in range(length)]
-    
-    def make_iovalue(self, length, maker=object):
-        return [maker() for i in range(length)]
-
-class TestVerifyStructureTupleIOSpec(
-    VerifyStructureBasicTest,
-    VerifyStructureStrictTest,
-    VerifyStructureUnlimitedTest,
-    unittest.TestCase,
-    ):
-    def make_iospec(self, length):
-        return tuple([object for i in range(length)])
-    
-    def make_iovalue(self, length, maker=object):
-        return tuple([maker() for i in range(length)])
-
-class TestVerifyStructureDictIOSpec(
-    VerifyStructureBasicTest,
-    VerifyStructureStrictTest,
-    VerifyStructureUnlimitedTest,
-    unittest.TestCase,
-    ):
-    def make_iospec(self, length):
-        keys = list('abc')
-        return {keys[i]: object for i in range(length)}
-    
-    def make_iovalue(self, length, maker=object):
-        keys = list('abc')
-        return {keys[i]: maker() for i in range(length)}
-
-class TestVerifyStructureListOfIOSpec(
-    VerifyStructureBasicTest,
-    unittest.TestCase,
-    ):
-    def make_iospec(self, length):
-        return iomanager.ListOf(object)
-    
-    def make_iovalue(self, length, maker=object):
-        return [maker() for i in range(length)]
-
-class TestVerifyStructureNestedIOSpec(
-    VerifyStructureBasicTest,
-    VerifyStructureStrictTest,
-    unittest.TestCase,
-    ):
-    def make_iospec(self, length):
-        keys = list('abc')
-        return {'x': {keys[i]: object for i in range(length)}}
-    
-    def make_iovalue(self, length, maker=object):
-        keys = list('abc')
-        return {'x': {keys[i]: maker() for i in range(length)}}
-    
+class VerifyStructureNestedTest(object):
     def unlimited_extra_nested_item_raises_test(self, parameter_name):
         """ When 'unlimited' is True, only top-level keyword arguments are
             unlimited. 'dict'-type iovalues should still be checked for unknown
@@ -458,6 +398,68 @@ class TestVerifyStructureNestedIOSpec(
     
     def test_unlimited_extra_nested_item_raises_optional(self):
         self.unlimited_extra_nested_item_raises_test('optional')
+
+class TestVerifyStructureListIOSpec(
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureUnlimitedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return [object for i in range(length)]
+    
+    def make_iovalue(self, length):
+        return [object() for i in range(length)]
+
+class TestVerifyStructureTupleIOSpec(
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureUnlimitedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return tuple([object for i in range(length)])
+    
+    def make_iovalue(self, length):
+        return tuple([object() for i in range(length)])
+
+class TestVerifyStructureDictIOSpec(
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureUnlimitedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        keys = list('abc')
+        return {keys[i]: object for i in range(length)}
+    
+    def make_iovalue(self, length):
+        keys = list('abc')
+        return {keys[i]: object() for i in range(length)}
+
+class TestVerifyStructureListOfIOSpec(
+    VerifyStructureBasicTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return iomanager.ListOf(object)
+    
+    def make_iovalue(self, length):
+        return [object() for i in range(length)]
+
+class TestVerifyStructureNestedDictDictIOSpec(
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureNestedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        keys = list('abc')
+        return {'x': {keys[i]: object for i in range(length)}}
+    
+    def make_iovalue(self, length):
+        keys = list('abc')
+        return {'x': {keys[i]: object() for i in range(length)}}
 
 
 
