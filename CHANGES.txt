@@ -1,11 +1,11 @@
-v0.1.0, 2013-03-20 -- Initial release.
+v0.1.0, 2013-03-20 -- Initial release
 
 v0.2.0, 2013-03-20 -- First working release.
 - Fix broken import statements from 'lcda' project.
 - Basic package setup files.
 - Apply X11 ("MIT") license.
 
-v0.2.1, 2013-03-27 -- 'process' parameters.
+v0.2.1, 2013-03-27 -- 'process' parameters
 - Alter 'IOProcess.process' parameters for simplicity. This change is not
   backwards compatible.
 - Add tests for 'tspecs_from_callable' function.
@@ -29,8 +29,16 @@ v0.3.0, 2013-04-02 -- Stable
   module.
 - Completely refactor tests.
 
-v0.3.1, 2013-04-05 -- Calling semantics.
+v0.3.1, 2013-04-05 -- Calling semantics
 - Change calling semantics. 'iospec' values ('required', 'optional', 'unlimited')
   are now passed to the 'IOManager' or 'IOProcessor' constructor, and only the
   'iovalue' value is passed to the 'verify' and 'coerce' methods.
 - Default values can be set with class attributes.
+
+v0.3.2, 2013-04-07 -- Input/Output verification errors
+- Coercion must now have two parameters: 'value' and 'expected type'. This allows
+  for re-usable coercion functions that can be applied to more than one type.
+- Create separate errors for input and output verification. Both errors inherit
+  from 'VerificationFailureError':
+  - InputVerificationFailureError
+  - OutputVerificationFailureError

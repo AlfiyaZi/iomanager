@@ -14,7 +14,7 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
     def coercion_test(self, type_obj, value, expected):
         coercion_function = self.coercion_functions[type_obj]
         
-        result = coercion_function(value)
+        result = coercion_function(value, type_obj)
         assert result == expected
     
     def arbitrary_value_test(self, type_obj):

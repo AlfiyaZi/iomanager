@@ -2,6 +2,8 @@ from iomanager import (
     IOProcessor,
     IOManager,
     VerificationFailureError,
+    InputVerificationFailureError,
+    OutputVerificationFailureError,
     TypeCheckFailureError,
     TypeCheckSuccessError,
     AnyType,
