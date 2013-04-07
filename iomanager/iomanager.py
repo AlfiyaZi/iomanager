@@ -74,7 +74,7 @@ class ListOf(object):
         self.iospec_obj = iospec_obj
         
         type_name_self = type(self).__name__.strip("'").strip('"')
-        if isinstance(iospec_obj, dict):
+        if isinstance(iospec_obj, (list, tuple, dict)):
             type_name_obj = str(iospec_obj)
         else:
             type_name_obj = iospec_obj.__name__.strip("'").strip('"')
