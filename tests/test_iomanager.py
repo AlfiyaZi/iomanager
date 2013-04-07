@@ -10,6 +10,8 @@ from iomanager import (
     IOProcessor,
     IOManager,
     VerificationFailureError,
+    InputVerificationFailureError,
+    OutputVerificationFailureError,
     TypeCheckSuccessError,
     TypeCheckFailureError,
     ListOf,
@@ -651,6 +653,32 @@ class TestIOManagerMethods(unittest.TestCase):
     def test_verify_output(self):
         self.method_test('verify_output')
 
+@pytest.mark.a
+class TestIOManagerVerificationErrors(unittest.TestCase):
+    """ IOManager raises 'InputVerificationFailuerError' and
+        'OutputVerificationFailureError' depending on whether an 'input...' or
+        'output...' method is being used. """
+    
+    def error_test(self, method_kind, phase, error_class):
+        kwargs_key = phase + '_kwargs'
+        manager = IOManager(**{kwargs_key: {'required': CustomType}})
+        method_name = '_'.join([method_kind, phase])
+        method = getattr(manager, method_name)
+        with pytest.raises(error_class):
+            method(iovalue=object())
+    
+    def test_verify_input_error(self):
+        self.error_test('verify', 'input', InputVerificationFailureError)
+    
+    def test_verify_output_error(self):
+        self.error_test('verify', 'output', OutputVerificationFailureError)
+    
+    def test_process_input_error(self):
+        self.error_test('process', 'input', InputVerificationFailureError)
+    
+    def test_process_output_error(self):
+        self.error_test('process', 'output', OutputVerificationFailureError)
+
 class IOManagerTest(unittest.TestCase):
     """ Test the 'IOManager' class. """
     def process_test(
@@ -961,16 +989,13 @@ class TestIOManagerClassAttributeDefaultsCoerce(
 
 # ----------------------------- ListOf tests -----------------------------
 
-@pytest.mark.a
 class TestListOfNestedContainers(unittest.TestCase):
     """ Initialize ListOf with all possible nested containers to confirm that
         they pass. """
     
-    @pytest.mark.c
     def test_list(self):
         ListOf([object])
     
-    @pytest.mark.b
     def test_tuple(self):
         ListOf(tuple([object]))
     
