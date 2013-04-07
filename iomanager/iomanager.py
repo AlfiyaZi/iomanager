@@ -410,7 +410,7 @@ class IOProcessor(object):
         except (KeyError, AttributeError):
             result = ioval
         else:
-            result = coercion_function(ioval)
+            result = coercion_function(ioval, expected_type)
         
         return result
     

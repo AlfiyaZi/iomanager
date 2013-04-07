@@ -38,7 +38,7 @@ class BeforeCoercionType(object):
 class YesCoercionType(object):
     """ A type with a custom coercion function. """
 
-def custom_coercion_function(value):
+def custom_coercion_function(value, expected_type):
     if isinstance(value, BeforeCoercionType):
         return YesCoercionType()
     return value
@@ -653,7 +653,6 @@ class TestIOManagerMethods(unittest.TestCase):
     def test_verify_output(self):
         self.method_test('verify_output')
 
-@pytest.mark.a
 class TestIOManagerVerificationErrors(unittest.TestCase):
     """ IOManager raises 'InputVerificationFailuerError' and
         'OutputVerificationFailureError' depending on whether an 'input...' or
@@ -742,7 +741,7 @@ class TestIOManagerProcessCoercion(IOManagerTest):
     def test_process_input(self):
         expected_value = self.InternalType()
         
-        def coercion_function(value):
+        def coercion_function(value, expected_type):
             return expected_value
         
         iovals = {'a': self.ExternalType()}
@@ -753,7 +752,7 @@ class TestIOManagerProcessCoercion(IOManagerTest):
     def test_process_output(self):
         expected_value = self.ExternalType()
         
-        def coercion_function(value):
+        def coercion_function(value, expected_type):
             return expected_value
         
         iovals = {'a': self.InternalType()}
@@ -819,10 +818,10 @@ class TestIOManagerPrecedenceCoercion(IOManagerPrecedenceTest):
         each override 'coercion_functions'. """
     
     def make_functions(self):
-        def overridden_function(value):
+        def overridden_function(value, expected_type):
             pass
         
-        def confirmed_function(value):
+        def confirmed_function(value, expected_type):
             raise ConfirmationError
         
         return overridden_function, confirmed_function

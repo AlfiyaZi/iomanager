@@ -4,19 +4,19 @@ import decimal
 import uuid
 from .iomanager import IOProcessor, IOManager
 
-def coerce_unicode_input(value):
+def coerce_unicode_input(value, expected_type):
     if not isinstance(value, str):
         return value
     
     return unicode(value)
 
-def coerce_decimal_input(value):
+def coerce_decimal_input(value, expected_type):
     if not isinstance(value, int):
         return value
     
-    return decimal.Decimal(value)
+    return decimal.Decimal(value, expected_type)
 
-def coerce_uuid_input(value):
+def coerce_uuid_input(value, expected_type):
     if not isinstance(value, basestring):
         return value
     
@@ -27,7 +27,7 @@ def coerce_uuid_input(value):
     
     return value
 
-def coerce_datetime_input(value):
+def coerce_datetime_input(value, expected_type):
     if not isinstance(value, basestring):
         return value
     
@@ -45,13 +45,13 @@ input_coercion_functions = {
     datetime.datetime: coerce_datetime_input,
     }
 
-def coerce_uuid_output(value):
+def coerce_uuid_output(value, expected_type):
     if not isinstance(value, uuid.UUID):
         return value
     
     return str(value)
 
-def coerce_datetime_output(value):
+def coerce_datetime_output(value, expected_type):
     if not isinstance(value, datetime.datetime):
         return value
     
