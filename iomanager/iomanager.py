@@ -19,6 +19,14 @@ class VerificationFailureError(Error):
         self.error_msg = pargs[0]
         super(VerificationFailureError, self).__init__(*pargs, **kwargs)
 
+class InputVerificationFailureError(VerificationFailureError):
+    """ Raised by IOManager to indicate that verification has failed when
+        'verify_input' was called. """
+
+class OutputVerificationFailureError(VerificationFailureError):
+    """ Raised by IOManager to indicate that verification has failed when
+        'verify_output' was called. """
+
 class WrongTypeError(Error):
     """ An 'ioval' value could not be coerced to the expected type.
         
@@ -437,7 +445,6 @@ class IOProcessor(object):
         return result_list
 
 class IOManager(object):
-    
     def __init__(
         self,
         input_kwargs={},
@@ -487,17 +494,17 @@ class IOManager(object):
     
     def process_input(self, iovalue):
         """ coerce(), then verify(). """
-        coerced_iovals = self.input_processor.coerce(iovalue)
-        self.input_processor.verify(coerced_iovals)
+        coerced_iovalue = self.coerce_input(iovalue)
+        self.verify_input(coerced_iovalue)
         
-        return coerced_iovals
+        return coerced_iovalue
     
     def process_output(self, iovalue):
         """ verify(), then coerce(). """
-        self.output_processor.verify(iovalue)
-        coerced_iovals = self.output_processor.coerce(iovalue)
+        self.verify_output(iovalue)
+        coerced_iovalue = self.coerce_output(iovalue)
         
-        return coerced_iovals
+        return coerced_iovalue
     
     def coerce_input(self, *pargs, **kwargs):
         return self.input_processor.coerce(*pargs, **kwargs)
@@ -506,10 +513,16 @@ class IOManager(object):
         return self.output_processor.coerce(*pargs, **kwargs)
     
     def verify_input(self, *pargs, **kwargs):
-        return self.input_processor.verify(*pargs, **kwargs)
+        try:
+            return self.input_processor.verify(*pargs, **kwargs)
+        except VerificationFailureError as exc:
+            raise InputVerificationFailureError(*exc.args)
     
     def verify_output(self, *pargs, **kwargs):
-        return self.output_processor.verify(*pargs, **kwargs)
+        try:
+            return self.output_processor.verify(*pargs, **kwargs)
+        except VerificationFailureError as exc:
+            raise OutputVerificationFailureError(*exc.args)
 
 
 
