@@ -929,16 +929,16 @@ class IOManagerClassAttributeDefaultsTest(object):
         self.operation_overrides_test('output')
     
     def test_operation_specific_defaults_input(self):
-        self.operation_defaults_test('input', 'input')
+        self.operation_defaults_test('input', True)
     
     def test_operation_specific_defaults_output(self):
-        self.operation_defaults_test('output', 'output')
+        self.operation_defaults_test('output', True)
     
     def test_operation_specific_overrides_input(self):
-        self.operation_overrides_test('input', 'input')
+        self.operation_overrides_test('input', True)
     
     def test_operation_specific_overrides_output(self):
-        self.operation_overrides_test('output', 'output')
+        self.operation_overrides_test('output', True)
 
 class TestIOManagerClassAttributeDefaultsVerify(
     IOManagerClassAttributeDefaultsTest,
