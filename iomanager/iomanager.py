@@ -161,10 +161,12 @@ class IOProcessor(object):
         unlimited=False,
         typecheck_functions=NotProvided,
         coercion_functions=NotProvided,
+        error_msg='Invalid input/output.'
         ):
         self.required = required
         self.optional = optional
         self.unlimited = unlimited
+        self.error_msg = error_msg
         
         if typecheck_functions is not NotProvided:
             self.typecheck_functions = typecheck_functions.copy()
@@ -212,9 +214,9 @@ class IOProcessor(object):
             if output_part and output_part is not NoDifference
             ]
         
-        err_msg = ('Invalid RPC arguments.\n' + '\n'.join(err_msg_parts))
+        error_msg = '\n'.join([self.error_msg] + err_msg_parts)
         
-        raise VerificationFailureError(err_msg)
+        raise VerificationFailureError(error_msg)
 
     def difference_ioval(
         self,
@@ -489,8 +491,14 @@ class IOManager(object):
         total_input_kwargs.update(input_kwargs)
         total_output_kwargs.update(output_kwargs)
         
-        self.input_processor = IOProcessor(**total_input_kwargs)
-        self.output_processor = IOProcessor(**total_output_kwargs)
+        self.input_processor = IOProcessor(
+            error_msg='Invalid input.',
+            **total_input_kwargs
+            )
+        self.output_processor = IOProcessor(
+            error_msg='Invalid output.',
+            **total_output_kwargs
+            )
     
     def process_input(self, iovalue):
         """ coerce(), then verify(). """
