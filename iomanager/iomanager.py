@@ -16,7 +16,9 @@ class VerificationFailureError(Error):
     """ The 'iovalue' value submitted for processing did not conform to the
         provided 'iospec' value. """
     def __init__(self, *pargs, **kwargs):
-        self.error_msg = pargs[0]
+        if not pargs:
+            pargs = ['Input/Output verification failed.']
+        
         super(VerificationFailureError, self).__init__(*pargs, **kwargs)
 
 class InputVerificationFailureError(VerificationFailureError):
