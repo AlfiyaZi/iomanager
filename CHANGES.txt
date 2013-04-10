@@ -42,3 +42,7 @@ v0.3.2, 2013-04-07 -- Input/Output verification errors
   from 'VerificationFailureError':
   - InputVerificationFailureError
   - OutputVerificationFailureError
+
+v0.3.3, 2013-04-09 -- Error messages
+- Add appropriate error messages for VerificationFailureError. Messages can be
+  customized by user.
