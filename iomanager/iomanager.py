@@ -17,7 +17,7 @@ class VerificationFailureError(Error):
         provided 'iospec' value. """
     def __init__(self, *pargs, **kwargs):
         if not pargs:
-            pargs.append('Input/Output verification failed.')
+            pargs = ['Input/Output verification failed.']
         
         super(VerificationFailureError, self).__init__(*pargs, **kwargs)
 
