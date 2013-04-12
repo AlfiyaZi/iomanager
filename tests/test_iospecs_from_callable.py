@@ -81,6 +81,62 @@ class TestParametersBothRequiredAndOptional(IOSpecValueTest, ResultTest):
     def test_optional_iospec(self):
         self.iospec_value_test('optional', ['b'])
 
+@pytest.mark.a
+class TestNonFunctionCallable(unittest.TestCase):
+    def callable_test(
+        self,
+        callable_class,
+        required_keys=[],
+        optional_keys=[],
+        ):
+        callable_obj = callable_class()
+        
+        result = iospecs_from_callable(callable_obj)
+        
+        assert result == {
+            'required': {ikey: AnyType for ikey in required_keys},
+            'optional': {ikey: AnyType for ikey in optional_keys},
+            }
+    
+    def test_no_parameters(self):
+        class Custom(object):
+            def __call__(self):
+                pass
+        
+        self.callable_test(Custom)
+    
+    def test_required(self):
+        class Custom(object):
+            def __call__(self, a):
+                pass
+        
+        self.callable_test(Custom, ['a'], [])
+    
+    def test_optional(self):
+        class Custom(object):
+            def __call__(self, b=None):
+                pass
+        
+        self.callable_test(Custom, [], ['b'])
+    
+    def test_required_and_optional(self):
+        class Custom(object):
+            def __call__(self, a, b=None):
+                pass
+        self.callable_test(Custom, ['a'], ['b'])
+    
+    def test_self_has_default(self):
+        """ This should never happen, but in case it does, we have it
+            covered. """
+        class Custom(object):
+            def __call__(self=None, b=None):
+                pass
+        self.callable_test(Custom, [], ['b'])
+    
+    def test_non_callable_object(self):
+        with pytest.raises(TypeError):
+            iospecs_from_callable(object())
+
 
 
 
