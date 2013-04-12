@@ -46,3 +46,6 @@ v0.3.2, 2013-04-07 -- Input/Output verification errors
 v0.3.3, 2013-04-09 -- Error messages
 - Add appropriate error messages for VerificationFailureError. Messages can be
   customized by user.
+
+v0.3.4, 2013-04-12 -- Fixes
+- Fix a few lingering organizational issues.
