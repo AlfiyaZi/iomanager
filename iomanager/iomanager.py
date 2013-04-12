@@ -547,9 +547,19 @@ def modify_unknown_result(ioval):
     return ioval
 
 def iospecs_from_callable(callable_obj):
-    argspec = inspect.getargspec(callable_obj)
+    if not hasattr(callable_obj, '__call__'):
+        raise TypeError(
+            "{} is not callable.".format(type(callable_obj).__name__)
+        )
+    if inspect.isfunction(callable_obj):
+        argspec = inspect.getargspec(callable_obj)
+        parameters = list(argspec.args)
+    else:
+        argspec = inspect.getargspec(callable_obj.__call__)
+        # Get rid of the 'self' parameter.
+        parameters = list(argspec.args)[1:]
     
-    parameters = list(argspec.args)
+    defaults = argspec.defaults
     
     if argspec.defaults is None:
         optionals_start = len(parameters)
