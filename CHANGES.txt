@@ -49,3 +49,4 @@ v0.3.3, 2013-04-09 -- Error messages
 
 v0.3.4, 2013-04-12 -- Fixes
 - Fix a few lingering organizational issues.
+- 'iospecs_from_callable' accepts non-function callable objects.
