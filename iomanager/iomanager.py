@@ -419,11 +419,12 @@ class IOProcessor(object):
         try:
             coercion_function = self.coercion_functions[expected_type]
         except (KeyError, AttributeError):
-            result = ioval
-        else:
-            result = coercion_function(ioval, expected_type)
+            return ioval
         
-        return result
+        try:
+            return coercion_function(ioval, expected_type)
+        except CoercionSuccessError as exc:
+            return exc.args[0]
     
     def coerce_dict(self, iovals_dict, iospec, nonetype_ok=True):
         result_iovals = {}
