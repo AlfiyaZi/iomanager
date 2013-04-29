@@ -6,6 +6,7 @@ from iomanager import (
     OutputVerificationFailureError,
     TypeCheckFailureError,
     TypeCheckSuccessError,
+    CoercionSuccessError,
     AnyType,
     ListOf,
     combine_iospecs,

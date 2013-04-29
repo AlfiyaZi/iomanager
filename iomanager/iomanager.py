@@ -68,6 +68,13 @@ class TypeCheckSuccessError(Error):
         Raised by a custom 'typecheck' (type confirmation) function to allow
         a value not of the expected type to pass confirmation. """
 
+class CoercionSuccessError(Error):
+    """ A value has been successfully coerced to the expected type.
+        
+        Raising this exception instead of simply returning the coerced value
+        stops the coercion routine. This behavior can be used to 'stack'
+        coercion functions. """
+
 
 
 # ----------------------- Custom parameter types -----------------------
