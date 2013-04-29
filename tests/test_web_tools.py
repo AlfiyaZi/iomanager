@@ -51,6 +51,9 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     def test_int_gets_arbitrary_type(self):
         self.arbitrary_value_test(int)
     
+    def test_float_gets_arbitrary_type(self):
+        self.arbitrary_value_test(float)
+    
     def test_decimal_gets_arbitrary_type(self):
         self.arbitrary_value_test(decimal.Decimal)
     
@@ -112,6 +115,16 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     
     def test_int_gets_invalid_string(self):
         self.invalid_string_test(int)
+    
+    def test_float_gets_string(self):
+        self.coercion_test(
+            float,
+            value='123.456',
+            expected=123.456,
+            )
+    
+    def test_float_gets_invalid_string(self):
+        self.invalid_string_test(float)
     
     def test_decimal_gets_string(self):
         decimal_value = decimal.Decimal('123.456')
