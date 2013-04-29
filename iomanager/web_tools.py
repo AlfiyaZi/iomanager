@@ -30,12 +30,12 @@ def coerce_bool_input(value, expected_type):
     else:
         raise CoercionSuccessError(result)
 
-def coerce_int_input(value, expected_type):
+def coerce_numeric_input(value, expected_type):
     if not isinstance(value, basestring):
         return value
     
     try:
-        result = int(value)
+        result = expected_type(value)
     except ValueError:
         return value
     else:
@@ -77,7 +77,8 @@ def coerce_datetime_input(value, expected_type):
 input_coercion_functions = {
     unicode: coerce_unicode_input,
     bool: coerce_bool_input,
-    int: coerce_int_input,
+    int: coerce_numeric_input,
+    float: coerce_numeric_input,
     decimal.Decimal: coerce_decimal_input,
     uuid.UUID: coerce_uuid_input,
     datetime.datetime: coerce_datetime_input,
