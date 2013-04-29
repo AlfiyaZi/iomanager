@@ -2,7 +2,11 @@ import datetime
 import dateutil.parser
 import decimal
 import uuid
-from .iomanager import IOProcessor, IOManager
+from .iomanager import (
+    IOProcessor,
+    IOManager,
+    CoercionSuccessError,
+    )
 
 def coerce_unicode_input(value, expected_type):
     if not isinstance(value, str):
@@ -10,36 +14,70 @@ def coerce_unicode_input(value, expected_type):
     
     return unicode(value)
 
-def coerce_decimal_input(value, expected_type):
-    if not isinstance(value, int):
+def coerce_bool_input(value, expected_type):
+    if not isinstance(value, basestring):
         return value
     
-    return decimal.Decimal(value, expected_type)
+    bool_values = {
+        'true': True,
+        'false': False,
+        }
+    
+    try:
+        result = bool_values[value.lower()]
+    except KeyError:
+        return value
+    else:
+        raise CoercionSuccessError(result)
+
+def coerce_int_input(value, expected_type):
+    if not isinstance(value, basestring):
+        return value
+    
+    try:
+        result = int(value)
+    except ValueError:
+        return value
+    else:
+        raise CoercionSuccessError(result)
+
+def coerce_decimal_input(value, expected_type):
+    if not isinstance(value, (basestring, int)):
+        return value
+    
+    try:
+        result = decimal.Decimal(value)
+    except ArithmeticError:
+        return value
+    else:
+        raise CoercionSuccessError(result)
 
 def coerce_uuid_input(value, expected_type):
     if not isinstance(value, basestring):
         return value
     
     try:
-        return uuid.UUID(value)
+        result = uuid.UUID(value)
     except ValueError:
-        pass
-    
-    return value
+        return value
+    else:
+        raise CoercionSuccessError(result)
 
 def coerce_datetime_input(value, expected_type):
     if not isinstance(value, basestring):
         return value
     
     try:
-        return dateutil.parser.parse(value)
+        result = dateutil.parser.parse(value)
     except ValueError:
-        pass
-    
-    return value
+        return value
+    else:
+        raise CoercionSuccessError(result)
 
 input_coercion_functions = {
     unicode: coerce_unicode_input,
+    bool: coerce_bool_input,
+    int: coerce_int_input,
     decimal.Decimal: coerce_decimal_input,
     uuid.UUID: coerce_uuid_input,
     datetime.datetime: coerce_datetime_input,
@@ -70,6 +108,6 @@ def output_processor(**kwargs):
     kwargs.setdefault('coercion_functions', output_coercion_functions)
     return IOProcessor(**kwargs)
 
-class JSONIOManager(IOManager):
+class WebIOManager(IOManager):
     input_kwargs={'coercion_functions': input_coercion_functions}
     output_kwargs={'coercion_functions': output_coercion_functions}

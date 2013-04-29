@@ -68,6 +68,13 @@ class TypeCheckSuccessError(Error):
         Raised by a custom 'typecheck' (type confirmation) function to allow
         a value not of the expected type to pass confirmation. """
 
+class CoercionSuccessError(Error):
+    """ A value has been successfully coerced to the expected type.
+        
+        Raising this exception instead of simply returning the coerced value
+        stops the coercion routine. This behavior can be used to 'stack'
+        coercion functions. """
+
 
 
 # ----------------------- Custom parameter types -----------------------
@@ -412,11 +419,12 @@ class IOProcessor(object):
         try:
             coercion_function = self.coercion_functions[expected_type]
         except (KeyError, AttributeError):
-            result = ioval
-        else:
-            result = coercion_function(ioval, expected_type)
+            return ioval
         
-        return result
+        try:
+            return coercion_function(ioval, expected_type)
+        except CoercionSuccessError as exc:
+            return exc.args[0]
     
     def coerce_dict(self, iovals_dict, iospec, nonetype_ok=True):
         result_iovals = {}
