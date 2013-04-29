@@ -5,6 +5,8 @@ import uuid
 import decimal
 import iomanager
 
+pytestmark = pytest.mark.a
+
 class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
     """ Confirm that the default type coercion functions behave as expected. """
     class ArbitraryType(object):
@@ -39,6 +41,12 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     def test_uuid_gets_arbitrary_type(self):
         self.arbitrary_value_test(uuid.UUID)
     
+    def test_bool_gets_arbitrary_type(self):
+        self.arbitrary_value_test(bool)
+    
+    def test_int_gets_arbitrary_type(self):
+        self.arbitrary_value_test(int)
+    
     def test_decimal_gets_arbitrary_type(self):
         self.arbitrary_value_test(decimal.Decimal)
     
@@ -67,6 +75,50 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
             value=uuid_string,
             expected=uuid_value,
             )
+    
+    def invalid_string_test(self, expected_type, invalid_string='xxx'):
+        self.coercion_test(
+            expected_type,
+            value=invalid_string,
+            expected=invalid_string,
+            )
+    
+    def bool_string_test(self, bool_string, expected):
+        self.coercion_test(
+            bool,
+            value=bool_string,
+            expected=expected,
+            )
+    
+    def test_bool_gets_true_string(self):
+        self.bool_string_test('true', True)
+    
+    def test_bool_gets_false_string(self):
+        self.bool_string_test('false', False)
+    
+    def test_bool_gets_invalid_string(self):
+        self.invalid_string_test(bool)
+    
+    def test_int_gets_string(self):
+        self.coercion_test(
+            int,
+            value='123',
+            expected=123
+            )
+    
+    def test_int_gets_invalid_string(self):
+        self.invalid_string_test(int)
+    
+    def test_decimal_gets_string(self):
+        decimal_value = decimal.Decimal('123.456')
+        self.coercion_test(
+            decimal.Decimal,
+            value=str(decimal_value),
+            expected=decimal_value,
+            )
+    
+    def test_decimal_gets_invalid_string(self):
+        self.invalid_string_test(decimal.Decimal)
     
     def test_decimal_gets_int(self):
         int_value = 123

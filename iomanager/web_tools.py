@@ -70,6 +70,6 @@ def output_processor(**kwargs):
     kwargs.setdefault('coercion_functions', output_coercion_functions)
     return IOProcessor(**kwargs)
 
-class JSONIOManager(IOManager):
+class WebIOManager(IOManager):
     input_kwargs={'coercion_functions': input_coercion_functions}
     output_kwargs={'coercion_functions': output_coercion_functions}

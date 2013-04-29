@@ -632,7 +632,6 @@ class TestCoercionContainersPreserved(unittest.TestCase):
     def test_list_preserved_optional(self):
         self.list_preserved_test('optional')
 
-@pytest.mark.a
 class TestCoercionSuccessError(unittest.TestCase):
     """ A coercion function can raise a 'CoercionSuccessError' to stop coercion
         and return a successfully coerced value. """
