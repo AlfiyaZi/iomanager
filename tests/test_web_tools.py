@@ -14,9 +14,13 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
             arbitrarily-typed value. """
     
     def coercion_test(self, type_obj, value, expected):
-        coercion_function = self.coercion_functions[type_obj]
+        processor = iomanager.IOProcessor(
+            required=type_obj,
+            coercion_functions=self.coercion_functions,
+            )
         
-        result = coercion_function(value, type_obj)
+        result = processor.coerce(value)
+        
         assert result == expected
     
     def arbitrary_value_test(self, type_obj):
