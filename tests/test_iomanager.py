@@ -14,6 +14,7 @@ from iomanager import (
     OutputVerificationFailureError,
     TypeCheckSuccessError,
     TypeCheckFailureError,
+    CoercionSuccessError,
     ListOf,
     )
 
@@ -619,6 +620,7 @@ class TestCoercionContainersPreserved(unittest.TestCase):
             need to preserve the input order; it would only need to call
             'sorted()' on the result, and it could get lucky. """
         initial = list(u'aWMp8CAjRjMd039Hy1o4fLCv0RsVZxTB')
+        assert sorted(initial) != initial
         expected = list(initial)
         iospec = [object for i in initial]
         
@@ -629,6 +631,27 @@ class TestCoercionContainersPreserved(unittest.TestCase):
     
     def test_list_preserved_optional(self):
         self.list_preserved_test('optional')
+
+class TestCoercionSuccessError(unittest.TestCase):
+    """ A coercion function can raise a 'CoercionSuccessError' to stop coercion
+        and return a successfully coerced value. """
+    
+    def test_error(self):
+        expected_value = object()
+        
+        def success_error_coercion_function(value, expected_type):
+            raise CoercionSuccessError(expected_value)
+        
+        processor = IOProcessor(
+            required=YesCoercionType,
+            coercion_functions={
+                YesCoercionType: success_error_coercion_function,
+                }
+            )
+        
+        result = processor.coerce(iovalue=YesCoercionType())
+        
+        assert result is expected_value
 
 
 

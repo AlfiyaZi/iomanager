@@ -5,6 +5,8 @@ import uuid
 import decimal
 import iomanager
 
+pytestmark = pytest.mark.a
+
 class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
     """ Confirm that the default type coercion functions behave as expected. """
     class ArbitraryType(object):
@@ -12,9 +14,13 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
             arbitrarily-typed value. """
     
     def coercion_test(self, type_obj, value, expected):
-        coercion_function = self.coercion_functions[type_obj]
+        processor = iomanager.IOProcessor(
+            required=type_obj,
+            coercion_functions=self.coercion_functions,
+            )
         
-        result = coercion_function(value, type_obj)
+        result = processor.coerce(value)
+        
         assert result == expected
     
     def arbitrary_value_test(self, type_obj):
@@ -26,7 +32,7 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
 
 class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     """ Confirm that input values coerce correctly. """
-    coercion_functions = iomanager.json_tools.input_coercion_functions
+    coercion_functions = iomanager.web_tools.input_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -38,6 +44,15 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     
     def test_uuid_gets_arbitrary_type(self):
         self.arbitrary_value_test(uuid.UUID)
+    
+    def test_bool_gets_arbitrary_type(self):
+        self.arbitrary_value_test(bool)
+    
+    def test_int_gets_arbitrary_type(self):
+        self.arbitrary_value_test(int)
+    
+    def test_float_gets_arbitrary_type(self):
+        self.arbitrary_value_test(float)
     
     def test_decimal_gets_arbitrary_type(self):
         self.arbitrary_value_test(decimal.Decimal)
@@ -68,6 +83,60 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
             expected=uuid_value,
             )
     
+    def invalid_string_test(self, expected_type, invalid_string='xxx'):
+        self.coercion_test(
+            expected_type,
+            value=invalid_string,
+            expected=invalid_string,
+            )
+    
+    def bool_string_test(self, bool_string, expected):
+        self.coercion_test(
+            bool,
+            value=bool_string,
+            expected=expected,
+            )
+    
+    def test_bool_gets_true_string(self):
+        self.bool_string_test('true', True)
+    
+    def test_bool_gets_false_string(self):
+        self.bool_string_test('false', False)
+    
+    def test_bool_gets_invalid_string(self):
+        self.invalid_string_test(bool)
+    
+    def test_int_gets_string(self):
+        self.coercion_test(
+            int,
+            value='123',
+            expected=123
+            )
+    
+    def test_int_gets_invalid_string(self):
+        self.invalid_string_test(int)
+    
+    def test_float_gets_string(self):
+        self.coercion_test(
+            float,
+            value='123.456',
+            expected=123.456,
+            )
+    
+    def test_float_gets_invalid_string(self):
+        self.invalid_string_test(float)
+    
+    def test_decimal_gets_string(self):
+        decimal_value = decimal.Decimal('123.456')
+        self.coercion_test(
+            decimal.Decimal,
+            value=str(decimal_value),
+            expected=decimal_value,
+            )
+    
+    def test_decimal_gets_invalid_string(self):
+        self.invalid_string_test(decimal.Decimal)
+    
     def test_decimal_gets_int(self):
         int_value = 123
         decimal_value = decimal.Decimal(int_value)
@@ -78,7 +147,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         
         On output, some value types are coerced to string values by default.
         This is done with JSON-serialization in mind. """
-    coercion_functions = iomanager.json_tools.output_coercion_functions
+    coercion_functions = iomanager.web_tools.output_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -119,10 +188,10 @@ class TestTypeCoercionCycle(unittest.TestCase):
     def coercion_cycle_test(self, type_obj, starting_value):
         iospec =  {'value': type_obj}
         
-        output_processor = iomanager.json_tools.output_processor(
+        output_processor = iomanager.web_tools.output_processor(
             required=iospec,
             )
-        input_processor = iomanager.json_tools.input_processor(
+        input_processor = iomanager.web_tools.input_processor(
             required=iospec,
             )
         
