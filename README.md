@@ -291,7 +291,7 @@ import iomanager
 def api_method_nextweek(some_date):
     return some_date + timedelta(days=7)
 
-manager = iomanager.json_tools.JSONIOManager(
+manager = iomanager.web_tools.JSONIOManager(
     input={'required': {'some_date': datetime.datetime}},
     output={'required': datetime.datetime}
     )

@@ -81,7 +81,6 @@ class TestParametersBothRequiredAndOptional(IOSpecValueTest, ResultTest):
     def test_optional_iospec(self):
         self.iospec_value_test('optional', ['b'])
 
-@pytest.mark.a
 class TestNonFunctionCallable(unittest.TestCase):
     def callable_test(
         self,

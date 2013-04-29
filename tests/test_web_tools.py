@@ -5,6 +5,8 @@ import uuid
 import decimal
 import iomanager
 
+pytestmark = pytest.mark.a
+
 class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
     """ Confirm that the default type coercion functions behave as expected. """
     class ArbitraryType(object):
@@ -26,7 +28,7 @@ class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
 
 class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     """ Confirm that input values coerce correctly. """
-    coercion_functions = iomanager.json_tools.input_coercion_functions
+    coercion_functions = iomanager.web_tools.input_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -78,7 +80,7 @@ class TestTypeCoercionDefaultFunctionsOutput(TypeCoercionDefaultFunctionsTest):
         
         On output, some value types are coerced to string values by default.
         This is done with JSON-serialization in mind. """
-    coercion_functions = iomanager.json_tools.output_coercion_functions
+    coercion_functions = iomanager.web_tools.output_coercion_functions
     
     # ------------- Arbitrary types pass with no coercion --------------
     
@@ -119,10 +121,10 @@ class TestTypeCoercionCycle(unittest.TestCase):
     def coercion_cycle_test(self, type_obj, starting_value):
         iospec =  {'value': type_obj}
         
-        output_processor = iomanager.json_tools.output_processor(
+        output_processor = iomanager.web_tools.output_processor(
             required=iospec,
             )
-        input_processor = iomanager.json_tools.input_processor(
+        input_processor = iomanager.web_tools.input_processor(
             required=iospec,
             )
         
