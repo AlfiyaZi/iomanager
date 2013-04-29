@@ -50,3 +50,9 @@ v0.3.3, 2013-04-09 -- Error messages
 v0.3.4, 2013-04-12 -- Fixes
 - Fix a few lingering organizational issues.
 - 'iospecs_from_callable' accepts non-function callable objects.
+
+v0.3.5, 2013-04-29 -- 'web_tools'
+- Rename 'json_tools' module to 'web_tools'.
+- 'web_tools' input coercion functions all coerce string values to the expected
+  types. This behavior handles string input values from POST, GET, etc. data.
+- Add coercion functions for numeric types 'bool', 'int', 'float'.
