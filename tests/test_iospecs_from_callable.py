@@ -16,7 +16,7 @@ class ResultTest(object):
         # Construct dummy iovals. For each key in 'required', 'optional', set
         # that key value to 'None' in the dummy ioval.
         iovals = {}
-        for item in result.itervalues():
+        for item in result.values():
             for ikey in item:
                 iovals.setdefault(ikey, None)
         

@@ -598,7 +598,7 @@ class TestCoercionContainersPreserved(unittest.TestCase):
         assert result == expected
     
     def dict_preserved_test(self, parameter_name):
-        keys = string.lowercase
+        keys = string.ascii_lowercase
         initial = {ikey: object() for ikey in keys}
         expected = initial.copy()
         iospec = {ikey: object for ikey in keys}
@@ -619,7 +619,7 @@ class TestCoercionContainersPreserved(unittest.TestCase):
             'naturally-sorted' order. Otherwise, the coercion function wouldn't
             need to preserve the input order; it would only need to call
             'sorted()' on the result, and it could get lucky. """
-        initial = list(u'aWMp8CAjRjMd039Hy1o4fLCv0RsVZxTB')
+        initial = list('aWMp8CAjRjMd039Hy1o4fLCv0RsVZxTB')
         assert sorted(initial) != initial
         expected = list(initial)
         iospec = [object for i in initial]

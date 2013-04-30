@@ -286,7 +286,7 @@ class IOProcessor(object):
         else:
             dict_objs = {
                 ikey: make_dict_from_list(ivalue)
-                for ikey, ivalue in list_objs.iteritems()
+                for ikey, ivalue in list_objs.items()
                 }
         
         dict_a = dict_objs[0]
@@ -310,7 +310,7 @@ class IOProcessor(object):
             iospec_dict = combined_iospec
         
         result = {
-            ikey: ivalue for ikey, ivalue in unknown.iteritems()
+            ikey: ivalue for ikey, ivalue in unknown.items()
             if ikey in iospec_dict
             }
         
@@ -630,7 +630,7 @@ def combine_iospecs_list(iospec_list_a, iospec_list_b):
     
     result_dict = combine_iospecs_dict(iospec_a, iospec_b)
     
-    return [result_dict[i] for i in sorted(result_dict.iterkeys())]
+    return [result_dict[i] for i in sorted(result_dict.keys())]
 
 def make_missing_output(iospec):
     if iospec is NoDifference:
@@ -644,7 +644,7 @@ def make_missing_output(iospec):
 def make_missing_output_dict(iospec):
     return {
         ikey: make_missing_output(ivalue)
-        for ikey, ivalue in iospec.iteritems()
+        for ikey, ivalue in iospec.items()
         }
 
 
