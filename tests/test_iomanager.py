@@ -451,17 +451,16 @@ class TestVerifyStructureListOfIOSpec(
     def make_iovalue(self, length):
         return [object() for i in range(length)]
 
-class VerifyStructureNestedTest(
-    VerifyStructureBasicTest,
-    VerifyStructureStrictTest,
-    VerifyStructureNestedUnlimitedTest,
-    ):
+class VerifyStructureNestedTest(object):
     def make_nested_dict(self, length, item):
         keys = string.ascii_lowercase
         return {keys[i]: item for i in range(length)}
 
 class TestVerifyStructureNestedListIOSpec(
     VerifyStructureNestedTest,
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureNestedUnlimitedTest,
     unittest.TestCase,
     ):
     def make_iospec(self, length):
@@ -472,6 +471,9 @@ class TestVerifyStructureNestedListIOSpec(
 
 class TestVerifyStructureNestedTupleIOSpec(
     VerifyStructureNestedTest,
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureNestedUnlimitedTest,
     unittest.TestCase,
     ):
     def make_iospec(self, length):
@@ -482,6 +484,9 @@ class TestVerifyStructureNestedTupleIOSpec(
 
 class TestVerifyStructureNestedDictIOSpec(
     VerifyStructureNestedTest,
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureNestedUnlimitedTest,
     unittest.TestCase,
     ):
     def make_iospec(self, length):
@@ -492,6 +497,7 @@ class TestVerifyStructureNestedDictIOSpec(
 
 class TestVerifyStructureNestedListOfIOSpec(
     VerifyStructureNestedTest,
+    VerifyStructureBasicTest,
     unittest.TestCase,
     ):
     def make_iospec(self, length):
