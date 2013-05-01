@@ -5,8 +5,6 @@ import uuid
 import decimal
 import iomanager
 
-pytestmark = pytest.mark.a
-
 class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
     """ Confirm that the default type coercion functions behave as expected. """
     class ArbitraryType(object):

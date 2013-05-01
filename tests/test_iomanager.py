@@ -384,7 +384,7 @@ class VerifyStructureUnlimitedTest(object):
     def test_unlimited_optional(self):
         self.unlimited_test('optional')
 
-class VerifyStructureNestedTest(object):
+class VerifyStructureNestedUnlimitedTest(object):
     def unlimited_extra_nested_item_raises_test(self, parameter_name):
         """ When 'unlimited' is True, only top-level keyword arguments are
             unlimited. 'dict'-type iovalues should still be checked for unknown
@@ -397,6 +397,7 @@ class VerifyStructureNestedTest(object):
                 iovalue=self.make_iovalue(2)
                 )
     
+    @pytest.mark.a
     def test_unlimited_extra_nested_item_raises_required(self):
         self.unlimited_extra_nested_item_raises_test('required')
     
@@ -434,11 +435,11 @@ class TestVerifyStructureDictIOSpec(
     unittest.TestCase,
     ):
     def make_iospec(self, length):
-        keys = list('abc')
+        keys = string.ascii_lowercase
         return {keys[i]: object for i in range(length)}
     
     def make_iovalue(self, length):
-        keys = list('abc')
+        keys = string.ascii_lowercase
         return {keys[i]: object() for i in range(length)}
 
 class TestVerifyStructureListOfIOSpec(
@@ -451,19 +452,54 @@ class TestVerifyStructureListOfIOSpec(
     def make_iovalue(self, length):
         return [object() for i in range(length)]
 
-class TestVerifyStructureNestedDictDictIOSpec(
+class VerifyStructureNestedTest(
     VerifyStructureBasicTest,
     VerifyStructureStrictTest,
+    VerifyStructureNestedUnlimitedTest,
+    ):
+    def make_nested_dict(self, length, item):
+        keys = string.ascii_lowercase
+        return {keys[i]: item for i in range(length)}
+
+class TestVerifyStructureNestedListIOSpec(
     VerifyStructureNestedTest,
     unittest.TestCase,
     ):
     def make_iospec(self, length):
-        keys = list('abc')
-        return {'x': {keys[i]: object for i in range(length)}}
+        return [self.make_nested_dict(length, object)]
     
     def make_iovalue(self, length):
-        keys = list('abc')
-        return {'x': {keys[i]: object() for i in range(length)}}
+        return [self.make_nested_dict(length, object())]
+
+class TestVerifyStructureNestedTupleIOSpec(
+    VerifyStructureNestedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return tuple([self.make_nested_dict(length, object)])
+    
+    def make_iovalue(self, length):
+        return tuple([self.make_nested_dict(length, object())])
+
+class TestVerifyStructureNestedDictIOSpec(
+    VerifyStructureNestedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return {'x': self.make_nested_dict(length, object)}
+    
+    def make_iovalue(self, length):
+        return {'x': self.make_nested_dict(length, object())}
+
+class TestVerifyStructureNestedListOfIOSpec(
+    VerifyStructureNestedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return ListOf(self.make_nested_dict(length, object))
+    
+    def make_iovalue(self, length):
+        return [self.make_nested_dict(length, object())]
 
 
 
