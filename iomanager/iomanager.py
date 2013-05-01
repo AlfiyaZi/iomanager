@@ -117,16 +117,20 @@ class NoDifference(object):
         This is necessary so that 'difference_ioval', 'difference_dict' and
         'difference_list' can all return the same value. """
 
-class UnknownDict(object):
+class UnknownContainer(object):
     """ Used to generate succinct error messages when a not-allowed keyword
-        argument has a dictionary value. """
-    def __repr__(self):
-        return '{...}'
-
-class UnknownList(object):
-    """ Like UnknownDict, but for lists. """
-    def __repr__(self):
-        return '[...]'
+        argument has a container-type value.
+            list --> '[...]'
+            dict --> '{...}'
+            etc.
+        """
+    def __init__(self, ioval):
+        if not is_container(ioval, (list, tuple, dict)):
+            raise TypeError(
+                "'ioval' must be a container object. Got: {}"
+                .format(str(ioval))
+                )
+        return '...'.join(str(type(ioval())))
 
 class WrongTypePair(object):
     """ Used to generate an error message for request arguments of the wrong
@@ -191,7 +195,10 @@ class IOProcessor(object):
         combined_iospec = combine_iospecs(required, optional)
         
         missing = self.difference_ioval(required, iovalue)
-        unknown = self.difference_ioval(iovalue, combined_iospec)
+        unknown = self.difference_ioval(
+            iovalue,
+            combined_iospec,
+            result_modifier=modify_unknown_result)
         
         if unlimited is True:
             unknown = self.filter_unlimited(unknown, combined_iospec)
@@ -531,13 +538,18 @@ class IOManager(object):
 
 # ----------------------------- Functions ------------------------------
 
+def is_container(obj, classinfo):
+    """ 'obj' is an instance of 'classinfo', but is not a 'str' or 'bytes'
+        instance. """
+    if isinstance(obj, classinfo) and not isinstance(obj, (str, bytes)):
+        return True
+    return False
+
 def modify_unknown_result(ioval):
-    if isinstance(ioval, dict):
-        return UnknownDict()
-    if isinstance(ioval, list):
-        return UnknownList()
-    
-    return ioval
+    try:
+        return UnknownContainer(ioval)
+    except TypeError:
+        return ioval
 
 def iospecs_from_callable(callable_obj):
     if not hasattr(callable_obj, '__call__'):
