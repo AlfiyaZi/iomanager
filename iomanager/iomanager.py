@@ -266,31 +266,22 @@ class IOProcessor(object):
     def difference_list(self, list_a, list_b, *pargs, **kwargs):
         """ The difference between two lists, or between a list and a
             ListOf. """
-        list_objs = {0: list_a, 1: list_b}
-        
-        for i in list_objs:
-            k = 1 - i
-            this = list_objs[i]
-            other = list_objs[k]
-            
-            if not isinstance(this, ListOf):
+        for item in [list_a, list_b]:
+            try:
+                target_length = len(item)
+                break
+            except TypeError:
                 continue
-            
-            dict_objs = {
-                i: this.make_dict(len(other)),
-                k: make_dict_from_list(other)
-                }
-            
-            break
-            
         else:
-            dict_objs = {
-                ikey: make_dict_from_list(ivalue)
-                for ikey, ivalue in list_objs.items()
-                }
+            raise TypeError(
+                "At least one of 'list_a', 'list_b' must be an iterable. Got: "
+                "list_a={}, list_b={}".format(list_a, list_b)
+                )
         
-        dict_a = dict_objs[0]
-        dict_b = dict_objs[1]
+        dict_a, dict_b = [
+            make_dict_from_listlike(item, target_length)
+            for item in [list_a, list_b]
+            ]
         
         return self.difference_dict(dict_a, dict_b, *pargs, **kwargs)
     
@@ -305,7 +296,7 @@ class IOProcessor(object):
             return NoDifference
         
         if isinstance(combined_iospec, list):
-            iospec_dict = make_dict_from_list(combined_iospec)
+            iospec_dict = make_dict_from_listlike(combined_iospec)
         else:
             iospec_dict = combined_iospec
         
@@ -386,12 +377,9 @@ class IOProcessor(object):
         if not isinstance(iovals_list, (list, tuple)):
             raise WrongTypeError(iospec_obj, iovals_list)
         
-        iovals_dict = make_dict_from_list(iovals_list)
+        iovals_dict = make_dict_from_listlike(iovals_list)
         
-        if isinstance(iospec_obj, ListOf):
-            iospec = iospec_obj.make_dict(len(iovals_list))
-        else:
-            iospec = make_dict_from_list(iospec_obj)
+        iospec = make_dict_from_listlike(iospec_obj, len(iovals_list))
         
         nonetype_ok = not isinstance(iospec_obj, ListOf)
         
@@ -441,12 +429,9 @@ class IOProcessor(object):
         return result_iovals
     
     def coerce_list(self, iovals_list, iospec_obj):
-        iovals_dict = make_dict_from_list(iovals_list)
+        iovals_dict = make_dict_from_listlike(iovals_list)
         
-        if isinstance(iospec_obj, ListOf):
-            iospec = iospec_obj.make_dict(len(iovals_list))
-        else:
-            iospec = make_dict_from_list(iospec_obj)
+        iospec = make_dict_from_listlike(iospec_obj, len(iovals_list))
         
         result_dict = self.coerce_dict(iovals_dict, iospec)
         
@@ -587,8 +572,15 @@ def iospecs_from_callable(callable_obj):
         }
     return result
 
-def make_dict_from_list(list_obj):
-    return dict(zip(range(len(list_obj)), list_obj))
+def make_dict_from_listlike(listlike_obj, target_length=None):
+    """ Make a dictionary from an iterable or a ListOf instance.
+        
+        'target_length' is only used if the listlike_obj is a ListOf
+        instance. """
+    if isinstance(listlike_obj, ListOf):
+        return listlike_obj.make_dict(target_length)
+    
+    return dict(zip(range(len(listlike_obj)), listlike_obj))
 
 def all_are_instances(items, type_objs):
     if not isinstance(type_objs, tuple):
@@ -625,8 +617,8 @@ def combine_iospecs_dict(iospec_a, iospec_b):
         }
 
 def combine_iospecs_list(iospec_list_a, iospec_list_b):
-    iospec_a = make_dict_from_list(iospec_list_a)
-    iospec_b = make_dict_from_list(iospec_list_b)
+    iospec_a = make_dict_from_listlike(iospec_list_a)
+    iospec_b = make_dict_from_listlike(iospec_list_b)
     
     result_dict = combine_iospecs_dict(iospec_a, iospec_b)
     
