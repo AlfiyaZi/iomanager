@@ -397,7 +397,6 @@ class VerifyStructureNestedUnlimitedTest(object):
                 iovalue=self.make_iovalue(2)
                 )
     
-    @pytest.mark.a
     def test_unlimited_extra_nested_item_raises_required(self):
         self.unlimited_extra_nested_item_raises_test('required')
     

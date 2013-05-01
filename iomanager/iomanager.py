@@ -130,7 +130,10 @@ class UnknownContainer(object):
                 "'ioval' must be a container object. Got: {}"
                 .format(str(ioval))
                 )
-        return '...'.join(str(type(ioval())))
+        self.representation = '...'.join(str(type(ioval)()))
+    
+    def __repr__(self):
+        return self.representation
 
 class WrongTypePair(object):
     """ Used to generate an error message for request arguments of the wrong
@@ -198,7 +201,8 @@ class IOProcessor(object):
         unknown = self.difference_ioval(
             iovalue,
             combined_iospec,
-            result_modifier=modify_unknown_result)
+            abbreviate=True,
+            )
         
         if unlimited is True:
             unknown = self.filter_unlimited(unknown, combined_iospec)
@@ -238,17 +242,21 @@ class IOProcessor(object):
         self,
         item_a,
         item_b=NotProvided,
-        result_modifier=None
+        abbreviate=False,
         ):
         if all_are_instances((item_a, item_b), dict):
-            return self.difference_dict(item_a, item_b, result_modifier)
+            return self.difference_dict(item_a, item_b, abbreviate)
         
         if all_are_instances((item_a, item_b), (list, tuple, ListOf)):
-            return self.difference_list(item_a, item_b, result_modifier)
+            return self.difference_list(item_a, item_b, abbreviate)
         
         if item_b is NotProvided:
-            if result_modifier:
-                return result_modifier(item_a)
+            if abbreviate:
+                # For 'unknown' output. Abbreviate container results.
+                try:
+                    return UnknownContainer(item_a)
+                except TypeError:
+                    pass
             
             return item_a
         
@@ -544,12 +552,6 @@ def is_container(obj, classinfo):
     if isinstance(obj, classinfo) and not isinstance(obj, (str, bytes)):
         return True
     return False
-
-def modify_unknown_result(ioval):
-    try:
-        return UnknownContainer(ioval)
-    except TypeError:
-        return ioval
 
 def iospecs_from_callable(callable_obj):
     if not hasattr(callable_obj, '__call__'):
