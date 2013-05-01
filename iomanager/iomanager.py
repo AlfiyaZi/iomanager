@@ -310,8 +310,8 @@ class IOProcessor(object):
         if unknown is NoDifference:
             return NoDifference
         
-        if isinstance(combined_iospec, list):
-            iospec_dict = make_dict_from_listlike(combined_iospec)
+        if isinstance(combined_iospec, (list, tuple, ListOf)):
+            iospec_dict = make_dict_from_listlike(combined_iospec, len(unknown))
         else:
             iospec_dict = combined_iospec
         
@@ -592,6 +592,11 @@ def make_dict_from_listlike(listlike_obj, target_length=None):
         'target_length' is only used if the listlike_obj is a ListOf
         instance. """
     if isinstance(listlike_obj, ListOf):
+        if target_length is None:
+            raise TypeError(
+                "'target_length' must be provided when 'listlike_obj' is a "
+                "'ListOf' instance."
+                )
         return listlike_obj.make_dict(target_length)
     
     return dict(zip(range(len(listlike_obj)), listlike_obj))
