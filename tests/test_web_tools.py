@@ -5,8 +5,6 @@ import uuid
 import decimal
 import iomanager
 
-pytestmark = pytest.mark.a
-
 class TypeCoercionDefaultFunctionsTest(unittest.TestCase):
     """ Confirm that the default type coercion functions behave as expected. """
     class ArbitraryType(object):
@@ -36,9 +34,6 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
     
     # ------------- Arbitrary types pass with no coercion --------------
     
-    def test_unicode_gets_arbitrary_type(self):
-        self.arbitrary_value_test(unicode)
-    
     def test_datetime_gets_arbitrary_type(self):
         self.arbitrary_value_test(datetime.datetime)
     
@@ -58,11 +53,6 @@ class TestTypeCoercionDefaultFunctionsInput(TypeCoercionDefaultFunctionsTest):
         self.arbitrary_value_test(decimal.Decimal)
     
     # --------------------- Coercion result tests ----------------------
-    
-    def test_unicode_gets_str(self):
-        unicode_value = u'abc'
-        str_value = str(unicode_value)
-        self.coercion_test(unicode, str_value, unicode_value)
     
     def test_datetime_gets_string(self):
         """ An ISO-formatted datetime string coerces to a datetime value. """

@@ -231,7 +231,7 @@ def api_method_nextweek(some_date):
     return some_date + timedelta(days=7)
 
 def coerce_datetime_input(value):
-    if isinstance(value, basestring):
+    if isinstance(value, str):
         try:
             return dateutil.parser.parse(value)
         except ValueError:
