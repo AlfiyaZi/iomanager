@@ -56,3 +56,9 @@ v0.3.5, 2013-04-29 -- 'web_tools'
 - 'web_tools' input coercion functions all coerce string values to the expected
   types. This behavior handles string input values from POST, GET, etc. data.
 - Add coercion functions for numeric types 'bool', 'int', 'float'.
+
+v0.4.0, 2013-04-30 -- Python 3.3.1
+- Refactor package to work with Python 3.3.1.
+- Remove 'coerce_unicode_input' function from 'web_tools'. The 'unicode'
+  type is gone!
+- Fix: Nested container-type iospecs behavior with 'unlimited' keyword.
