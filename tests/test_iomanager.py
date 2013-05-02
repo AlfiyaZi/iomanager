@@ -384,7 +384,7 @@ class VerifyStructureUnlimitedTest(object):
     def test_unlimited_optional(self):
         self.unlimited_test('optional')
 
-class VerifyStructureNestedTest(object):
+class VerifyStructureNestedUnlimitedTest(object):
     def unlimited_extra_nested_item_raises_test(self, parameter_name):
         """ When 'unlimited' is True, only top-level keyword arguments are
             unlimited. 'dict'-type iovalues should still be checked for unknown
@@ -434,11 +434,11 @@ class TestVerifyStructureDictIOSpec(
     unittest.TestCase,
     ):
     def make_iospec(self, length):
-        keys = list('abc')
+        keys = string.ascii_lowercase
         return {keys[i]: object for i in range(length)}
     
     def make_iovalue(self, length):
-        keys = list('abc')
+        keys = string.ascii_lowercase
         return {keys[i]: object() for i in range(length)}
 
 class TestVerifyStructureListOfIOSpec(
@@ -451,19 +451,60 @@ class TestVerifyStructureListOfIOSpec(
     def make_iovalue(self, length):
         return [object() for i in range(length)]
 
-class TestVerifyStructureNestedDictDictIOSpec(
+class VerifyStructureNestedTest(object):
+    def make_nested_dict(self, length, item):
+        keys = string.ascii_lowercase
+        return {keys[i]: item for i in range(length)}
+
+class TestVerifyStructureNestedListIOSpec(
+    VerifyStructureNestedTest,
     VerifyStructureBasicTest,
     VerifyStructureStrictTest,
-    VerifyStructureNestedTest,
+    VerifyStructureNestedUnlimitedTest,
     unittest.TestCase,
     ):
     def make_iospec(self, length):
-        keys = list('abc')
-        return {'x': {keys[i]: object for i in range(length)}}
+        return [self.make_nested_dict(length, object)]
     
     def make_iovalue(self, length):
-        keys = list('abc')
-        return {'x': {keys[i]: object() for i in range(length)}}
+        return [self.make_nested_dict(length, object())]
+
+class TestVerifyStructureNestedTupleIOSpec(
+    VerifyStructureNestedTest,
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureNestedUnlimitedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return tuple([self.make_nested_dict(length, object)])
+    
+    def make_iovalue(self, length):
+        return tuple([self.make_nested_dict(length, object())])
+
+class TestVerifyStructureNestedDictIOSpec(
+    VerifyStructureNestedTest,
+    VerifyStructureBasicTest,
+    VerifyStructureStrictTest,
+    VerifyStructureNestedUnlimitedTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return {'x': self.make_nested_dict(length, object)}
+    
+    def make_iovalue(self, length):
+        return {'x': self.make_nested_dict(length, object())}
+
+class TestVerifyStructureNestedListOfIOSpec(
+    VerifyStructureNestedTest,
+    VerifyStructureBasicTest,
+    unittest.TestCase,
+    ):
+    def make_iospec(self, length):
+        return ListOf(self.make_nested_dict(length, object))
+    
+    def make_iovalue(self, length):
+        return [self.make_nested_dict(length, object())]
 
 
 
@@ -598,7 +639,7 @@ class TestCoercionContainersPreserved(unittest.TestCase):
         assert result == expected
     
     def dict_preserved_test(self, parameter_name):
-        keys = string.lowercase
+        keys = string.ascii_lowercase
         initial = {ikey: object() for ikey in keys}
         expected = initial.copy()
         iospec = {ikey: object for ikey in keys}
@@ -619,7 +660,7 @@ class TestCoercionContainersPreserved(unittest.TestCase):
             'naturally-sorted' order. Otherwise, the coercion function wouldn't
             need to preserve the input order; it would only need to call
             'sorted()' on the result, and it could get lucky. """
-        initial = list(u'aWMp8CAjRjMd039Hy1o4fLCv0RsVZxTB')
+        initial = list('aWMp8CAjRjMd039Hy1o4fLCv0RsVZxTB')
         assert sorted(initial) != initial
         expected = list(initial)
         iospec = [object for i in initial]

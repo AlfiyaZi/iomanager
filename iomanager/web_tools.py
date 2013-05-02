@@ -8,14 +8,8 @@ from .iomanager import (
     CoercionSuccessError,
     )
 
-def coerce_unicode_input(value, expected_type):
-    if not isinstance(value, str):
-        return value
-    
-    return unicode(value)
-
 def coerce_bool_input(value, expected_type):
-    if not isinstance(value, basestring):
+    if not isinstance(value, str):
         return value
     
     bool_values = {
@@ -31,7 +25,7 @@ def coerce_bool_input(value, expected_type):
         raise CoercionSuccessError(result)
 
 def coerce_numeric_input(value, expected_type):
-    if not isinstance(value, basestring):
+    if not isinstance(value, str):
         return value
     
     try:
@@ -42,7 +36,7 @@ def coerce_numeric_input(value, expected_type):
         raise CoercionSuccessError(result)
 
 def coerce_decimal_input(value, expected_type):
-    if not isinstance(value, (basestring, int)):
+    if not isinstance(value, (str, int)):
         return value
     
     try:
@@ -53,7 +47,7 @@ def coerce_decimal_input(value, expected_type):
         raise CoercionSuccessError(result)
 
 def coerce_uuid_input(value, expected_type):
-    if not isinstance(value, basestring):
+    if not isinstance(value, str):
         return value
     
     try:
@@ -64,7 +58,7 @@ def coerce_uuid_input(value, expected_type):
         raise CoercionSuccessError(result)
 
 def coerce_datetime_input(value, expected_type):
-    if not isinstance(value, basestring):
+    if not isinstance(value, str):
         return value
     
     try:
@@ -75,7 +69,6 @@ def coerce_datetime_input(value, expected_type):
         raise CoercionSuccessError(result)
 
 input_coercion_functions = {
-    unicode: coerce_unicode_input,
     bool: coerce_bool_input,
     int: coerce_numeric_input,
     float: coerce_numeric_input,

@@ -1,6 +1,10 @@
 """ Copyright (c) 2013 Josh Matthias <python.iomanager@gmail.com> """
 
 import inspect
+from collections.abc import(
+    Sequence,
+    Mapping,
+    )
 
 """ Jargon:
     'ioval' --> 'Input/Output value'
@@ -91,7 +95,8 @@ class ListOf(object):
         self.iospec_obj = iospec_obj
         
         type_name_self = type(self).__name__.strip("'").strip('"')
-        if isinstance(iospec_obj, (list, tuple, dict)):
+        
+        if is_container(iospec_obj, (Sequence, Mapping)):
             type_name_obj = str(iospec_obj)
         else:
             type_name_obj = iospec_obj.__name__.strip("'").strip('"')
@@ -117,16 +122,23 @@ class NoDifference(object):
         This is necessary so that 'difference_ioval', 'difference_dict' and
         'difference_list' can all return the same value. """
 
-class UnknownDict(object):
+class UnknownContainer(object):
     """ Used to generate succinct error messages when a not-allowed keyword
-        argument has a dictionary value. """
+        argument has a container-type value.
+            list --> '[...]'
+            dict --> '{...}'
+            etc.
+        """
+    def __init__(self, ioval):
+        if not is_container(ioval, (Sequence, Mapping)):
+            raise TypeError(
+                "'ioval' must be a container object. Got: {}"
+                .format(str(ioval))
+                )
+        self.representation = '...'.join(str(type(ioval)()))
+    
     def __repr__(self):
-        return '{...}'
-
-class UnknownList(object):
-    """ Like UnknownDict, but for lists. """
-    def __repr__(self):
-        return '[...]'
+        return self.representation
 
 class WrongTypePair(object):
     """ Used to generate an error message for request arguments of the wrong
@@ -191,7 +203,11 @@ class IOProcessor(object):
         combined_iospec = combine_iospecs(required, optional)
         
         missing = self.difference_ioval(required, iovalue)
-        unknown = self.difference_ioval(iovalue, combined_iospec)
+        unknown = self.difference_ioval(
+            iovalue,
+            combined_iospec,
+            abbreviate=True,
+            )
         
         if unlimited is True:
             unknown = self.filter_unlimited(unknown, combined_iospec)
@@ -231,17 +247,21 @@ class IOProcessor(object):
         self,
         item_a,
         item_b=NotProvided,
-        result_modifier=None
+        abbreviate=False,
         ):
-        if all_are_instances((item_a, item_b), dict):
-            return self.difference_dict(item_a, item_b, result_modifier)
+        if all_are_containers((item_a, item_b), Mapping):
+            return self.difference_dict(item_a, item_b, abbreviate)
         
-        if all_are_instances((item_a, item_b), (list, tuple, ListOf)):
-            return self.difference_list(item_a, item_b, result_modifier)
+        if all_are_containers((item_a, item_b), (Sequence, ListOf)):
+            return self.difference_list(item_a, item_b, abbreviate)
         
         if item_b is NotProvided:
-            if result_modifier:
-                return result_modifier(item_a)
+            if abbreviate:
+                # For 'unknown' output. Abbreviate container results.
+                try:
+                    return UnknownContainer(item_a)
+                except TypeError:
+                    pass
             
             return item_a
         
@@ -266,31 +286,22 @@ class IOProcessor(object):
     def difference_list(self, list_a, list_b, *pargs, **kwargs):
         """ The difference between two lists, or between a list and a
             ListOf. """
-        list_objs = {0: list_a, 1: list_b}
-        
-        for i in list_objs:
-            k = 1 - i
-            this = list_objs[i]
-            other = list_objs[k]
-            
-            if not isinstance(this, ListOf):
+        for item in [list_a, list_b]:
+            try:
+                target_length = len(item)
+                break
+            except TypeError:
                 continue
-            
-            dict_objs = {
-                i: this.make_dict(len(other)),
-                k: make_dict_from_list(other)
-                }
-            
-            break
-            
         else:
-            dict_objs = {
-                ikey: make_dict_from_list(ivalue)
-                for ikey, ivalue in list_objs.iteritems()
-                }
+            raise TypeError(
+                "At least one of 'list_a', 'list_b' must be an iterable. Got: "
+                "list_a={}, list_b={}".format(list_a, list_b)
+                )
         
-        dict_a = dict_objs[0]
-        dict_b = dict_objs[1]
+        dict_a, dict_b = [
+            make_dict_from_listlike(item, target_length)
+            for item in [list_a, list_b]
+            ]
         
         return self.difference_dict(dict_a, dict_b, *pargs, **kwargs)
     
@@ -304,13 +315,13 @@ class IOProcessor(object):
         if unknown is NoDifference:
             return NoDifference
         
-        if isinstance(combined_iospec, list):
-            iospec_dict = make_dict_from_list(combined_iospec)
+        if is_container(combined_iospec, (Sequence, ListOf)):
+            iospec_dict = make_dict_from_listlike(combined_iospec, len(unknown))
         else:
             iospec_dict = combined_iospec
         
         result = {
-            ikey: ivalue for ikey, ivalue in unknown.iteritems()
+            ikey: ivalue for ikey, ivalue in unknown.items()
             if ikey in iospec_dict
             }
         
@@ -323,11 +334,11 @@ class IOProcessor(object):
             expected_type = AnyType
         
         # Verify container types.
-        if isinstance(expected_type, dict):
+        if is_container(expected_type, Mapping):
             self.confirm_type_dict(ioval, expected_type)
             return
         
-        if isinstance(expected_type, (list, tuple, ListOf)):
+        if is_container(expected_type, (Sequence, ListOf)):
             self.confirm_type_list(ioval, expected_type)
             return
         
@@ -359,7 +370,7 @@ class IOProcessor(object):
         raise WrongTypeError(expected_type, ioval)
     
     def confirm_type_dict(self, iovals_dict, iospec_dict, nonetype_ok=True):
-        if not isinstance(iovals_dict, dict):
+        if not isinstance(iovals_dict, Mapping):
             raise WrongTypeError(dict, iovals_dict)
         
         wrong_types = {}
@@ -383,15 +394,12 @@ class IOProcessor(object):
             
             An attribute called 'lists_allow_none_values' is being considered
             to allow modification of this behavior. """
-        if not isinstance(iovals_list, (list, tuple)):
+        if not is_container(iovals_list, Sequence):
             raise WrongTypeError(iospec_obj, iovals_list)
         
-        iovals_dict = make_dict_from_list(iovals_list)
+        iovals_dict = make_dict_from_listlike(iovals_list)
         
-        if isinstance(iospec_obj, ListOf):
-            iospec = iospec_obj.make_dict(len(iovals_list))
-        else:
-            iospec = make_dict_from_list(iospec_obj)
+        iospec = make_dict_from_listlike(iospec_obj, len(iovals_list))
         
         nonetype_ok = not isinstance(iospec_obj, ListOf)
         
@@ -409,10 +417,10 @@ class IOProcessor(object):
     
     def coerce_ioval(self, ioval, expected_type, nonetype_ok=True):
         # Coerce container types.
-        if isinstance(expected_type, dict):
+        if is_container(expected_type, Mapping):
             return self.coerce_dict(ioval, expected_type)
         
-        if isinstance(expected_type, (list, tuple, ListOf)):
+        if is_container(expected_type, (Sequence, ListOf)):
             return self.coerce_list(ioval, expected_type)
         
         # Coerce non-container types.
@@ -441,12 +449,9 @@ class IOProcessor(object):
         return result_iovals
     
     def coerce_list(self, iovals_list, iospec_obj):
-        iovals_dict = make_dict_from_list(iovals_list)
+        iovals_dict = make_dict_from_listlike(iovals_list)
         
-        if isinstance(iospec_obj, ListOf):
-            iospec = iospec_obj.make_dict(len(iovals_list))
-        else:
-            iospec = make_dict_from_list(iospec_obj)
+        iospec = make_dict_from_listlike(iospec_obj, len(iovals_list))
         
         result_dict = self.coerce_dict(iovals_dict, iospec)
         
@@ -546,13 +551,19 @@ class IOManager(object):
 
 # ----------------------------- Functions ------------------------------
 
-def modify_unknown_result(ioval):
-    if isinstance(ioval, dict):
-        return UnknownDict()
-    if isinstance(ioval, list):
-        return UnknownList()
+def is_container(obj, classinfo):
+    """ 'obj' is an instance of 'classinfo', but is not a 'str' or 'bytes'
+        instance. """
+    if isinstance(obj, classinfo) and not isinstance(obj, (str, bytes)):
+        return True
+    return False
+
+def all_are_containers(objs, classinfo):
+    for item in objs:
+        if not is_container(item, classinfo):
+            return False
     
-    return ioval
+    return True
 
 def iospecs_from_callable(callable_obj):
     if not hasattr(callable_obj, '__call__'):
@@ -587,24 +598,26 @@ def iospecs_from_callable(callable_obj):
         }
     return result
 
-def make_dict_from_list(list_obj):
-    return dict(zip(range(len(list_obj)), list_obj))
-
-def all_are_instances(items, type_objs):
-    if not isinstance(type_objs, tuple):
-        type_objs = (type_objs, )
+def make_dict_from_listlike(listlike_obj, target_length=None):
+    """ Make a dictionary from an iterable or a ListOf instance.
+        
+        'target_length' is only used if the listlike_obj is a ListOf
+        instance. """
+    if isinstance(listlike_obj, ListOf):
+        if target_length is None:
+            raise TypeError(
+                "'target_length' must be provided when 'listlike_obj' is a "
+                "'ListOf' instance."
+                )
+        return listlike_obj.make_dict(target_length)
     
-    for item in items:
-        if not isinstance(item, type_objs):
-            return False
-    
-    return True
+    return dict(zip(range(len(listlike_obj)), listlike_obj))
 
 def combine_iospecs(iospec_a=NotProvided, iospec_b=NotProvided):
-    if all_are_instances((iospec_a, iospec_b), dict):
+    if all_are_containers((iospec_a, iospec_b), dict):
         return combine_iospecs_dict(iospec_a, iospec_b)
     
-    if all_are_instances((iospec_a, iospec_b), (list, tuple)):
+    if all_are_containers((iospec_a, iospec_b), Sequence):
         return combine_iospecs_list(iospec_a, iospec_b)
     
     if iospec_a is NotProvided:
@@ -625,18 +638,18 @@ def combine_iospecs_dict(iospec_a, iospec_b):
         }
 
 def combine_iospecs_list(iospec_list_a, iospec_list_b):
-    iospec_a = make_dict_from_list(iospec_list_a)
-    iospec_b = make_dict_from_list(iospec_list_b)
+    iospec_a = make_dict_from_listlike(iospec_list_a)
+    iospec_b = make_dict_from_listlike(iospec_list_b)
     
     result_dict = combine_iospecs_dict(iospec_a, iospec_b)
     
-    return [result_dict[i] for i in sorted(result_dict.iterkeys())]
+    return [result_dict[i] for i in sorted(result_dict.keys())]
 
 def make_missing_output(iospec):
     if iospec is NoDifference:
         return None
     
-    if isinstance(iospec, dict):
+    if is_container(iospec, Mapping):
         return make_missing_output_dict(iospec)
     
     return TypeNameRepresentation(iospec)
@@ -644,7 +657,7 @@ def make_missing_output(iospec):
 def make_missing_output_dict(iospec):
     return {
         ikey: make_missing_output(ivalue)
-        for ikey, ivalue in iospec.iteritems()
+        for ikey, ivalue in iospec.items()
         }
 
 
