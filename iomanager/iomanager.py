@@ -23,7 +23,7 @@ class VerificationFailureError(Error):
         if not pargs:
             pargs = ['Input/Output verification failed.']
         
-        super(VerificationFailureError, self).__init__(*pargs, **kwargs)
+        super().__init__(*pargs, **kwargs)
 
 class InputVerificationFailureError(VerificationFailureError):
     """ Raised by IOManager to indicate that verification has failed when
